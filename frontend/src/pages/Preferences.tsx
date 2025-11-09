@@ -101,7 +101,7 @@ const PhysicalPreferences = () => {
               className="flex-1 bg-gradient-to-r from-automotive-blue to-automotive-navy text-white hover:opacity-90 transition-opacity"
               size="lg"
             >
-              Start Swiping
+              Start Swiping!
             </Button>
           </div>
         </form>

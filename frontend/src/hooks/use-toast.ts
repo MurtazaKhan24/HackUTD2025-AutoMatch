@@ -166,7 +166,7 @@ function toast({ ...props }: Toast) {
 
 function useToast() {
   useEffect(() => {
-    fetch('http://127.0.0.1:5000/api/hello')
+    fetch('http://127.0.0.1:5001/api/hello')
       .then((response) => response.json())
       .then((data) => console.log(data.message))
       .catch((error) => console.error('Error:', error));

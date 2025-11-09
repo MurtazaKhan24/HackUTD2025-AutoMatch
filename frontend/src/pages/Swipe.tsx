@@ -14,57 +14,29 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Car {
-  id: number;
   make: string;
   model: string;
-  year: number;
-  price: number;
-  image: string;
-  mileage: number;
-  transmission: string;
-  bodyType: string;
-  // Added hardcoded details
-  engine: string;
-  horsepower: number;
-  torque: number;
-  fuelEconomy: string;
-  safetyRating: number;
-  features: string[];
-  dealerNote: string;
+  year: string | number;
+  price?: {
+    marketValue?: number;
+  };
+  photos?: string[];
+  url?: string;
+  source?: string;
+  specs?: {
+    mpg?: string;
+    horsepower?: number;
+    transmission?: string;
+    drivetrain?: string;
+    engine?: string;
+  };
+  trim?: string;
+  features?: string[];
+  pros?: string[];
+  cons?: string[];
+  safety_rating?: number;
+  weight?: number;
 }
-
-const mockCars: Car[] = [
-  { 
-    id: 1, make: "Tesla", model: "Model 3", year: 2023, price: 45000, image: "https://images.unsplash.com/photo-1560958089-b8a1929cea89?w=800", mileage: 5000, transmission: "automatic", bodyType: "sedan",
-    engine: "Dual Electric Motor", horsepower: 450, torque: 471, fuelEconomy: "131 MPGe", safetyRating: 5,
-    features: ["Autopilot", "Panoramic Glass Roof", "15-inch Touchscreen", "Sentry Mode"],
-    dealerNote: "Like new, owner upgrading to Model S. Clean title and zero emissions!"
-  },
-  { 
-    id: 2, make: "BMW", model: "X5", year: 2022, price: 65000, image: "https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=800", mileage: 12000, transmission: "automatic", bodyType: "suv",
-    engine: "3.0L 6-Cylinder Turbo", horsepower: 335, torque: 331, fuelEconomy: "25 MPG Hwy", safetyRating: 5,
-    features: ["Heated Seats", "Apple CarPlay", "Lane Keep Assist", "Panoramic Sunroof"],
-    dealerNote: "One-owner lease return. All maintenance records available. Excellent condition."
-  },
-  { 
-    id: 3, make: "Ford", model: "Mustang", year: 2023, price: 55000, image: "https://images.unsplash.com/photo-1584345604476-8ec5f8d7c922?w=800", mileage: 3000, transmission: "manual", bodyType: "coupe",
-    engine: "5.0L V8", horsepower: 450, torque: 410, fuelEconomy: "24 MPG Hwy", safetyRating: 5,
-    features: ["B&O Sound System", "Digital Instrument Cluster", "MagnaRide Damping", "Active Valve Exhaust"],
-    dealerNote: "Barely driven! This GT Premium is a thrill to drive. Owner moving out of country."
-  },
-  { 
-    id: 4, make: "Mercedes", model: "C-Class", year: 2022, price: 48000, image: "https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=800", mileage: 8000, transmission: "automatic", bodyType: "sedan",
-    engine: "2.0L 4-Cylinder Turbo", horsepower: 255, torque: 295, fuelEconomy: "31 MPG Hwy", safetyRating: 5,
-    features: ["MBUX Infotainment", "Burmester Surround Sound", "Heated Seats", "Blind Spot Assist"],
-    dealerNote: "Certified Pre-Owned. Comes with an additional 1-year unlimited mileage warranty."
-  },
-  { 
-    id: 5, make: "Porsche", model: "911", year: 2023, price: 120000, image: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800", mileage: 2000, transmission: "automatic", bodyType: "coupe",
-    engine: "3.0L 6-Cylinder Twin-Turbo", horsepower: 379, torque: 331, fuelEconomy: "23 MPG Hwy", safetyRating: 4,
-    features: ["PASM", "Sport Chrono Package", "Leather Interior", "Bose Surround Sound"],
-    dealerNote: "A true icon. This Carrera is in pristine condition. No track days. Serious inquiries only."
-  },
-];
 
 // Constant for how far a user needs to drag before it counts as a swipe
 const SWIPE_THRESHOLD = 100;
@@ -74,40 +46,75 @@ const Swipe = () => {
   const navigate = useNavigate();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [likedCars, setLikedCars] = useState<Car[]>([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [cars, setCars] = useState<Car[]>([]);
+  const [loading, setLoading] = useState(true);
   
   const [dragOffset, setDragOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [exitDirection, setExitDirection] = useState<"left" | "right" | null>(null);
 
   useEffect(() => {
-    const preferences = localStorage.getItem("carPreferences");
-    if (!preferences) {
-      toast.error("Please set your preferences first");
+    // Load car suggestions from localStorage (already fetched in PhysicalPreferences)
+    const suggestions = localStorage.getItem("carSuggestions");
+    if (!suggestions) {
+      toast.error("No car suggestions found. Please set your preferences first.");
       navigate("/");
+      return;
     }
 
+    try {
+      const parsedSuggestions = JSON.parse(suggestions);
+      setCars(parsedSuggestions);
+    } catch (error) {
+      console.error("Failed to parse car suggestions:", error);
+      toast.error("Failed to load car suggestions. Please try again.");
+      navigate("/");
+    } finally {
+      setLoading(false);
+    }
+
+    // Load liked cars from storage
     const stored = localStorage.getItem("likedCars");
     if (stored) {
       setLikedCars(JSON.parse(stored));
     }
   }, [navigate]);
 
-  const completeSwipe = (direction: "left" | "right") => {
+  const completeSwipe = async (direction: "left" | "right") => {
+    if (currentIndex >= cars.length) return;
+    
     setExitDirection(direction);
     setDragOffset(0); 
     
+    const currentCar = cars[currentIndex];
+    
     if (direction === "right") {
-      const currentCar = mockCars[currentIndex];
       const updatedLiked = [...likedCars, currentCar];
       setLikedCars(updatedLiked);
       localStorage.setItem("likedCars", JSON.stringify(updatedLiked));
       toast.success(`Added ${currentCar.make} ${currentCar.model} to favorites!`);
     }
 
+    // Record the swipe interaction with backend
+    try {
+      await fetch('http://localhost:5001/api/swipe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          car: currentCar,
+          liked: direction === "right"
+        })
+      });
+    } catch (error) {
+      console.error("Failed to record swipe:", error);
+    }
+
+    // Wait for animation to finish before showing next card
     setTimeout(() => {
       setExitDirection(null);
-      if (currentIndex < mockCars.length - 1) {
+      if (currentIndex < cars.length - 1) {
         setCurrentIndex(currentIndex + 1);
       } else {
         toast.success("You've seen all available cars!");
@@ -154,7 +161,41 @@ const Swipe = () => {
     preventScrollOnSwipe: true,
   });
 
-  const currentCar = mockCars[currentIndex];
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-automotive-navy via-automotive-dark to-automotive-blue flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-white mx-auto mb-4"></div>
+          <p className="text-white text-lg">Finding perfect cars for you...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show empty state
+  if (cars.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-automotive-navy via-automotive-dark to-automotive-blue flex items-center justify-center p-4">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-white mb-4">No Cars Found</h2>
+          <p className="text-gray-300 mb-6">We couldn't find any cars matching your preferences</p>
+          <Button onClick={() => navigate("/")} className="bg-white text-automotive-navy hover:bg-gray-100">
+            Update Preferences
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const currentCar = cars[currentIndex];
+  
+  // Get display image - use photos array if available, otherwise fallback to placeholder
+  const carImage = currentCar.photos && currentCar.photos.length > 0 
+    ? currentCar.photos[0] 
+    : `https://images.unsplash.com/photo-1560958089-b8a1929cea89?w=800`;
+
+  // Calculate rotation based on drag distance (e.g., 15 degrees max tilt)
   const rotation = isDragging ? dragOffset / 20 : 0;
   
   const renderStars = (rating: number) => {
@@ -185,7 +226,7 @@ const Swipe = () => {
 
         <div className="relative h-[500px] flex items-center justify-center">
           {/* Next card (visible underneath) */}
-          {currentIndex < mockCars.length - 1 && (
+          {currentIndex < cars.length - 1 && (
             <Card className="absolute w-full max-w-md mx-auto overflow-hidden shadow-elevated scale-95 opacity-50 -z-10">
                <div className="relative h-96 bg-gray-800">
                   {/* Placeholder for next card to give depth */}
@@ -215,7 +256,7 @@ const Swipe = () => {
               <Card className="overflow-hidden shadow-elevated">
                 <div className="relative h-96 pointer-events-none select-none">
                   <img
-                    src={currentCar.image}
+                    src={carImage}
                     alt={`${currentCar.make} ${currentCar.model}`}
                     className="w-full h-full object-cover"
                     draggable="false"
@@ -226,14 +267,24 @@ const Swipe = () => {
                       {currentCar.year} {currentCar.make} {currentCar.model}
                     </h2>
                     <p className="text-2xl font-semibold mb-2">
-                      ${currentCar.price.toLocaleString()}
+                      ${currentCar.price?.marketValue?.toLocaleString() || 'Contact for price'}
                     </p>
                     <div className="flex gap-4 text-sm">
-                      <span>{currentCar.mileage.toLocaleString()} miles</span>
-                      <span>•</span>
-                      <span className="capitalize">{currentCar.transmission}</span>
-                      <span>•</span>
-                      <span className="capitalize">{currentCar.bodyType}</span>
+                      {currentCar.specs?.transmission && (
+                        <>
+                          <span className="capitalize">{currentCar.specs.transmission}</span>
+                          <span>•</span>
+                        </>
+                      )}
+                      {currentCar.specs?.mpg && (
+                        <>
+                          <span>{currentCar.specs.mpg} MPG</span>
+                          <span>•</span>
+                        </>
+                      )}
+                      {currentCar.trim && (
+                        <span className="capitalize">{currentCar.trim}</span>
+                      )}
                     </div>
                   </div>
 
@@ -284,7 +335,7 @@ const Swipe = () => {
         </div>
 
         <p className="text-center text-white/70 mt-6">
-          {mockCars.length - currentIndex} cars remaining
+          {cars.length - currentIndex} cars remaining
         </p>
       </div>
 

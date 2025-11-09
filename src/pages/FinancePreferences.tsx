@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { Toggle } from "@/components/ui/toggle";
@@ -11,9 +12,8 @@ const FinancePreferences = () => {
   const navigate = useNavigate();
   const [paymentType, setPaymentType] = useState<"monthly" | "total">("total");
   const [budget, setBudget] = useState([50000]);
-  const [financing, setFinancing] = useState<'finance' | 'cash'>('finance');
+  const [financing, setFinancing] = useState("");
   const [loanTerm, setLoanTerm] = useState(60); // months, default 60
-  const [downPayment, setDownPayment] = useState(0);
 
   const monthlyMin = 200;
   const monthlyMax = 2000;
@@ -24,49 +24,20 @@ const FinancePreferences = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (!financing) {
       toast.error("Please select a financing preference");
       return;
     }
-    
-    // Clear liked cars when starting a new preference session
-    localStorage.removeItem("likedCars");
-    
+
+    // Store finance preferences in localStorage
     localStorage.setItem("financePreferences", JSON.stringify({
       paymentType,
       budget: budget[0],
-      financing,
-      loanTerm,
-      downPayment
+      financing
     }));
-    navigate("/preferences/physical");
 
-    // Fire off price estimate in the background
-    const financeData = {
-      budget: budget[0],
-      payment: financing === 'finance' ? 'loan' : 'cash',
-      state: 'TX', // TODO: get from user or location
-      zipcode: '75080', // TODO: get from user or location
-      down_payment: downPayment.toString(),
-      apr: financing === 'finance' ? '5.9' : '0', // TODO: get from user if needed
-      term_months: financing === 'finance' ? loanTerm.toString() : '0'
-    };
-    fetch("http://127.0.0.1:5001/api/price/target", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(financeData)
-    })
-      .then(res => res.json())
-      .then(result => {
-        if (result.target_listing_price) {
-          toast.success(`Agent Estimated OTD price: $${Number(result.target_listing_price).toLocaleString()}`);
-        } else {
-          toast.error("Could not calculate estimated price.");
-        }
-      })
-      .catch(() => {
-        toast.error("Error contacting backend for price estimate.");
-      });
+    navigate("/preferences/physical");
   };
 
   return (
@@ -74,36 +45,14 @@ const FinancePreferences = () => {
       <Card className="w-full max-w-2xl p-8 bg-card shadow-elevated">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-automotive-blue to-automotive-silver bg-clip-text text-transparent mb-2">
-            AutoMatch
+            AutoSwipe
           </h1>
           <p className="text-muted-foreground">Step 1: Finance Preferences</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-4">
-            {/* Financing type toggle */}
-            <div className="flex items-center justify-between w-full mb-2">
-              <Label className="text-base font-semibold">Financing Preference</Label>
-              <Toggle
-                pressed={financing === 'finance'}
-                onPressedChange={(pressed: boolean) => {
-                  const value = pressed ? 'finance' : 'cash';
-                  setFinancing(value);
-                  if (value === 'cash') {
-                    setPaymentType('total');
-                    setBudget([50000]);
-                  } else {
-                    setBudget([paymentType === 'monthly' ? 500 : 50000]);
-                  }
-                }}
-                aria-label="Toggle financing type"
-                className="w-44 h-12 flex items-center justify-between px-3 rounded-full bg-gradient-to-r from-automotive-navy to-automotive-blue border border-automotive-silver shadow-lg"
-              >
-                <span className={financing === 'cash' ? 'text-white font-bold' : 'text-automotive-silver font-medium'}>Cash</span>
-                <span className={financing === 'finance' ? 'text-white font-bold' : 'text-automotive-silver font-medium'}>Finance</span>
-              </Toggle>
-            </div>
-            {/* Show payment type toggle only when user chooses Finance */}
+            {/* Show a single rocker/toggle only when user chooses Finance */}
             {financing === "finance" && (
               <div className="flex items-center justify-between w-full mb-2">
                 <Label className="text-base font-semibold">Payment Type</Label>
@@ -165,26 +114,37 @@ const FinancePreferences = () => {
             </div>
           )}
 
-          {/* Down payment input only for financing */}
-          {financing === "finance" && (
-            <div className="space-y-2">
-              <Label htmlFor="downPayment" className="text-base font-semibold">
-                Down Payment: ${downPayment.toLocaleString()}
-              </Label>
-              <input
-                id="downPayment"
-                type="number"
-                min={0}
-                step={500}
-                value={downPayment}
-                onChange={e => setDownPayment(Number(e.target.value))}
-                className="w-full px-4 py-2 rounded border border-automotive-silver focus:outline-none focus:ring-2 focus:ring-automotive-blue"
-                placeholder="Enter down payment amount"
-              />
-            </div>
-          )}
+          <div className="space-y-2">
+            <Label htmlFor="financing" className="text-base font-semibold">
+              Financing Preference
+            </Label>
+            <Select value={financing} onValueChange={value => {
+              setFinancing(value);
+              if (value === "cash") {
+                setPaymentType("total");
+                setBudget([50000]); // reset to total default
+              }
+              if (value === "lease") {
+                setPaymentType("total");
+                setBudget([50000]);
+              }
+              if (value === "finance") {
+                // keep current paymentType, but reset budget to default for current type
+                setBudget([paymentType === "monthly" ? 500 : 50000]);
+              }
+            }}>
+              <SelectTrigger id="financing">
+                <SelectValue placeholder="Select financing option" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="cash">Cash</SelectItem>
+                <SelectItem value="lease">Lease</SelectItem>
+                <SelectItem value="finance">Finance</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-          <Button 
+           <Button 
              type="submit" 
              className="w-full bg-gradient-to-r from-automotive-blue to-automotive-navy text-white hover:opacity-90 transition-opacity"
              size="lg"

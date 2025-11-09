@@ -1,0 +1,23 @@
+[
+  { "id": "bluetooth", "label": "Bluetooth", "syn": ["wireless audio"] },
+  { "id": "heated_seats", "label": "Heated Seats", "syn": ["warm seats"] },
+  { "id": "ventilated_seats", "label": "Ventilated/Cooled Seats", "syn": ["cool seats", "ventilated seats"] },
+  { "id": "massaging_seats", "label": "Massaging Seats", "syn": ["massage seats"] },
+  { "id": "ambient_lighting", "label": "Ambient Lighting", "syn": ["interior lighting"] },
+  { "id": "push_to_start", "label": "Push to Start", "syn": ["start button"] },
+  { "id": "heated_steering_wheel", "label": "Heated Steering Wheel", "syn": ["warm wheel"] },
+  { "id": "soft_close_doors", "label": "Soft Close Doors", "syn": ["soft doors"] },
+  { "id": "digital_dash", "label": "Digital Dash", "syn": ["digital display", "virtual cockpit"] },
+  { "id": "3d_view", "label": "3D Surround View", "syn": ["360 camera", "surround view"] },
+  { "id": "color_black", "label": "Black", "cat": "color", "syn": ["black exterior", "black car"] },
+  { "id": "color_white", "label": "White", "cat": "color", "syn": ["white exterior", "white car"] },
+  { "id": "color_gray", "label": "Gray", "cat": "color", "syn": ["grey", "gray car"] },
+  { "id": "color_silver", "label": "Silver", "cat": "color", "syn": ["silver car"] },
+  { "id": "color_blue", "label": "Blue", "cat": "color", "syn": ["blue car"] },
+  { "id": "color_red", "label": "Red", "cat": "color", "syn": ["red car"] },
+  { "id": "color_green", "label": "Green", "cat": "color", "syn": ["green car"] },
+  { "id": "color_yellow", "label": "Yellow", "cat": "color", "syn": ["yellow car"] },
+  { "id": "color_brown", "label": "Brown", "cat": "color", "syn": ["brown car"] },
+  { "id": "color_orange", "label": "Orange", "cat": "color", "syn": ["orange car"] },
+  { "id": "color_purple", "label": "Purple", "cat": "color", "syn": ["purple car"] }
+]

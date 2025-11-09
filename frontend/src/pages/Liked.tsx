@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ChevronLeft, Home, Trash2, Check } from "lucide-react";
+import { ChevronLeft, Home, Trash2, Check, Heart, Star } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -12,24 +12,31 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+// Use the same interface as Swipe page
 interface Car {
-  id: number;
   make: string;
   model: string;
-  year: number;
-  price: number;
-  image: string;
-  mileage: number;
-  transmission: string;
-  bodyType: string;
-  // Added hardcoded details
-  engine?: string;
-  horsepower?: number;
-  torque?: number;
-  fuelEconomy?: string;
-  safetyRating?: number;
+  year: string | number;
+  price?: {
+    marketValue?: number;
+  };
+  photos?: string[];
+  url?: string;
+  source?: string;
+  specs?: {
+    mpg?: string;
+    horsepower?: number;
+    transmission?: string;
+    drivetrain?: string;
+    engine?: string;
+  };
+  trim?: string;
   features?: string[];
-  dealerNote?: string;
+  pros?: string[];
+  cons?: string[];
+  safety_rating?: number;
+  weight?: number;
+  reviewLink?: string;
 }
 
 // Helper to render stars
@@ -90,16 +97,17 @@ const Liked = () => {
   useEffect(() => {
     const stored = localStorage.getItem("likedCars");
     if (stored) {
-      const cars: Car[] = JSON.parse(stored);
-      // Add fake details to each car
-      const carsWithDetails = cars.map(addFakeDetails);
-      setLikedCars(carsWithDetails);
+      try {
+        setLikedCars(JSON.parse(stored));
+      } catch (error) {
+        console.error("Failed to parse liked cars:", error);
+        setLikedCars([]);
+      }
     }
   }, []);
 
-  const handleRemove = (e: React.MouseEvent, carId: number) => {
-    e.stopPropagation(); // Stop the click from opening the modal
-    const updated = likedCars.filter(car => car.id !== carId);
+  const handleRemove = (index: number) => {
+    const updated = likedCars.filter((_, i) => i !== index);
     setLikedCars(updated);
     // Update local storage with the *original* car data, not the one with fake details
     const originalCars = updated.map(({ engine, horsepower, torque, fuelEconomy, safetyRating, features, dealerNote, ...originalCar }) => originalCar);
@@ -143,28 +151,24 @@ const Liked = () => {
               Start swiping to find your perfect car!
             </p>
             <Button onClick={() => navigate("/swipe")}>
-              Start Swiping
+              Start Swiping!
             </Button>
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {likedCars.map((car) => (
-              <Card
-                key={car.id}
-                className="overflow-hidden shadow-card hover:shadow-elevated transition-shadow cursor-pointer"
-                onClick={() => setSelectedCar(car)}
-              >
+            {likedCars.map((car, index) => (
+              <Card key={index} className="overflow-hidden shadow-card hover:shadow-elevated transition-shadow">
                 <div className="relative h-48">
                   <img
-                    src={car.image}
+                    src={car.photos?.[0] || '/placeholder.svg'}
                     alt={`${car.make} ${car.model}`}
                     className="w-full h-full object-cover"
                   />
                   <Button
                     size="icon"
                     variant="destructive"
-                    className="absolute top-2 right-2 h-8 w-8 rounded-full z-10"
-                    onClick={(e) => handleRemove(e, car.id)}
+                    className="absolute top-2 right-2 h-8 w-8 rounded-full"
+                    onClick={() => handleRemove(index)}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -181,17 +185,38 @@ const Liked = () => {
                 <div className="p-4">
                   <h3 className="text-xl font-bold mb-1">
                     {car.year} {car.make} {car.model}
+                    {car.trim && <span className="text-base ml-2 text-gray-500">{car.trim}</span>}
                   </h3>
                   <p className="text-2xl font-semibold text-automotive-blue mb-3">
-                    ${car.price.toLocaleString()}
+                    ${car.price?.marketValue?.toLocaleString() || 'Contact for price'}
                   </p>
-                  <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
-                    <span>{car.mileage.toLocaleString()} miles</span>
-                    <span>•</span>
-                    <span className="capitalize">{car.transmission}</span>
-                    <span>•</span>
-                    <span className="capitalize">{car.bodyType}</span>
+                  <div className="flex flex-wrap gap-2 text-sm text-muted-foreground mb-3">
+                    {car.specs?.transmission && (
+                      <>
+                        <span className="capitalize">{car.specs.transmission}</span>
+                        <span>•</span>
+                      </>
+                    )}
+                    {car.specs?.mpg && (
+                      <>
+                        <span>{car.specs.mpg} MPG</span>
+                        <span>•</span>
+                      </>
+                    )}
+                    {car.specs?.drivetrain && (
+                      <span className="capitalize">{car.specs.drivetrain}</span>
+                    )}
                   </div>
+                  {car.reviewLink && (
+                    <Button 
+                      size="sm" 
+                      className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                      onClick={() => window.open(car.reviewLink, '_blank')}
+                    >
+                      <Star className="w-4 h-4 mr-2" />
+                      Agent Research
+                    </Button>
+                  )}
                 </div>
               </Card>
             ))}
