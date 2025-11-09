@@ -1,5 +1,6 @@
 import * as React from "react";
-import { useEffect } from "react";
+import { useEffect } from "react"; // This is actually no longer needed here, but fine to leave
+import { useState } from "react";
 
 import type { ToastActionElement, ToastProps } from "@/components/ui/toast";
 
@@ -165,12 +166,9 @@ function toast({ ...props }: Toast) {
 }
 
 function useToast() {
-  useEffect(() => {
-    fetch('http://127.0.0.1:5000/api/hello')
-      .then((response) => response.json())
-      .then((data) => console.log(data.message))
-      .catch((error) => console.error('Error:', error));
-  }, []);
+  // -----------------------------------------------------------------
+  // THE BAD CODE IS GONE FROM HERE
+  // -----------------------------------------------------------------
 
   const [state, setState] = React.useState<State>(memoryState);
 

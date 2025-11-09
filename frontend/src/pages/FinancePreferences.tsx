@@ -7,6 +7,8 @@ import { Card } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { Toggle } from "@/components/ui/toggle";
 import { toast } from "sonner";
+import { MessageSquare } from "lucide-react";
+import Chatbot from "@/components/Chatbot";
 
 const FinancePreferences = () => {
   const navigate = useNavigate();
@@ -14,6 +16,7 @@ const FinancePreferences = () => {
   const [budget, setBudget] = useState([50000]);
   const [financing, setFinancing] = useState("");
   const [loanTerm, setLoanTerm] = useState(60); // months, default 60
+  const [showChat, setShowChat] = useState(false);
 
   const monthlyMin = 200;
   const monthlyMax = 2000;
@@ -153,6 +156,29 @@ const FinancePreferences = () => {
            </Button>
          </form>
        </Card>
+       {showChat && (
+         <div className="fixed bottom-24 right-8 w-96 h-[60vh] bg-white shadow-2xl rounded-lg z-50">
+           <Chatbot />
+           {/* Add a close button */}
+           <Button 
+             variant="ghost" 
+             size="icon"
+             onClick={() => setShowChat(false)}
+             className="absolute top-2 right-2"
+           >
+             X
+           </Button>
+         </div>
+       )}
+
+       {/* This is the button to open the chat */}
+       <Button
+         onClick={() => setShowChat(!showChat)} // Toggle chat
+         className="fixed bottom-8 right-8 w-16 h-16 rounded-full bg-automotive-blue shadow-lg z-40"
+         size="icon"
+       >
+         <MessageSquare className="h-8 w-8 text-white" />
+       </Button>
      </div>
    );
  };

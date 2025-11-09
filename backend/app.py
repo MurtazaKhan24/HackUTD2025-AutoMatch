@@ -1,69 +1,61 @@
 import requests
-import os  # <-- NEW: Import the 'os' module
-from dotenv import load_dotenv  # <-- NEW: Import load_dotenv
+import os
+import json 
+from dotenv import load_dotenv
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 
-# --- NEW: Load environment variables from .env file ---
 load_dotenv()
-# ----------------------------------------------------
-
-# 1. Initialize the Flask App
 app = Flask(__name__)
+CORS(app) 
 
-# 2. Define your vLLM's endpoint
-#    It now reads from the environment variable we set in the .env file
 VLLM_API_URL = os.environ.get("VLLM_API_URL")
-
-# --- NEW: Add a check to make sure the URL was loaded ---
 if not VLLM_API_URL:
     raise ValueError("VLLM_API_URL is not set. Please check your .env file.")
-# --------------------------------------------------------
+
+# --- NEW PROMPT: FINANCIAL DATA GATHERING ---
+SYSTEM_PROMPT = (
+    "You are 'AutoMate,' a friendly financial assistant for a car app. "
+    "Your goal is to collect relevant pieces of information from the user such as: "
+    "If the users asks for help regarding financing a car, such as the ideal number of months for taking a loan, or a suggestion for downpayment given their monthly budget and monthly payment for lower interest kindly help them."
+    "1. 'monthly_payment' (their max monthly budget) "
+    "2. 'term_months' (their desired loan term in months) "
+    "3. 'downpayment' (their down payment amount) "
+    "Politely ask for this information ONE question at a time. "
+    "Once you have all three, respond *only* with a valid JSON object containing the data. "
+    "/no_think"
+)
 
 @app.route("/chat", methods=["POST"])
-def handle_chat():
-    """
-    This endpoint receives a prompt from a client,
-    forwards it to the vLLM, and returns the vLLM's response.
-    """
-    
-    # 3. Get the user's prompt from the incoming request
-    incoming_data = request.get_json()
-    if not incoming_data or "prompt" not in incoming_data:
-        return jsonify({"error": "Missing 'prompt' in JSON body"}), 400
+def chat():
+    messages = request.json.get("messages")
+    if not messages:
+        return jsonify({"error": "Messages array is required"}), 400
 
-    user_prompt = incoming_data["prompt"]
-
-    # 4. Prepare the JSON payload for the vLLM
     vllm_payload = {
         "model": "nvidia/NVIDIA-Nemotron-Nano-9B-v2",
-        "messages": [{"role": "user", "content": user_prompt}],
-        "max_tokens": 3072
-    }
-    
-    headers = {
-        "Content-Type": "application/json"
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            *messages 
+        ],
+        "max_tokens": 250,
+        "temperature": 0.2,
     }
 
     try:
-        # 5. Send the request to the vLLM
-        response = requests.post(
-            VLLM_API_URL,  # This now uses the variable loaded from .env
-            json=vllm_payload, 
-            headers=headers
-        )
-        
+        response = requests.post(VLLM_API_URL, json=vllm_payload)
         response.raise_for_status() 
-        
-        # 6. Return the vLLM's response back to the original client
-        return response.json()
 
-    except requests.exceptions.HTTPError as http_err:
-        return jsonify({"error": f"vLLM API error: {http_err}"}), 502
-    except requests.exceptions.RequestException as err:
-        return jsonify({"error": f"Request failed: {err}"}), 500
+        vllm_response = response.json()
+        final_reply = vllm_response.get("choices", [{}])[0].get("message", {}).get("content", "")
+        
+        # We just send the raw reply. Our React app will check if it's JSON
+        return jsonify({"reply": final_reply.strip()}) 
+
     except Exception as e:
+        print(f"Unexpected Server Error: {e}")
         return jsonify({"error": f"An unexpected error occurred: {e}"}), 500
 
-# Run the Flask app
+
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
