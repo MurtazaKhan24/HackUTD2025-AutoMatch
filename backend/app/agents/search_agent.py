@@ -19,6 +19,65 @@ logger = logging.getLogger(__name__)
 STATE_KEY = Annotated[Dict, "state"]
 SUGGESTIONS_KEY = Annotated[List, "suggestions"]
 
+def enrich_with_review_links(cars: List[Dict]) -> List[Dict]:
+    """
+    Enrich cars with review links by searching for reviews.
+    Uses parallel SerpAPI calls for speed.
+    """
+    logger.info(f"Enriching {len(cars)} cars with review links...")
+    
+    def get_review_link(car: Dict) -> Dict:
+        """Get a review link for a single car."""
+        try:
+            year = car.get('year', '')
+            make = car.get('make', '')
+            model = car.get('model', '')
+            
+            # Search for professional reviews
+            query = f"{year} {make} {model} review edmunds kelley blue book consumer reports"
+            
+            params = {
+                'engine': 'google',
+                'q': query,
+                'api_key': SERPAPI_KEY,
+                'num': 5,
+                'gl': 'us'
+            }
+            
+            resp = requests.get('https://serpapi.com/search', params=params, timeout=10)
+            resp.raise_for_status()
+            results = resp.json()
+            
+            # Find first review from trusted sources
+            trusted_domains = ['edmunds.com', 'kbb.com', 'consumerreports.org', 'caranddriver.com', 'motortrend.com']
+            for result in results.get('organic_results', []):
+                link = result.get('link', '')
+                if any(domain in link.lower() for domain in trusted_domains):
+                    car['reviewLink'] = link
+                    logger.debug(f"✓ Found review for {year} {make} {model}: {link}")
+                    return car
+            
+            # Fallback to first result if no trusted source found
+            if results.get('organic_results'):
+                car['reviewLink'] = results['organic_results'][0].get('link', '')
+                logger.debug(f"✓ Found review (fallback) for {year} {make} {model}")
+            else:
+                logger.debug(f"✗ No review found for {year} {make} {model}")
+                
+        except Exception as e:
+            logger.warning(f"Failed to get review link for {car.get('year')} {car.get('make')} {car.get('model')}: {e}")
+        
+        return car
+    
+    # Run in parallel for speed
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        enriched_cars = list(executor.map(get_review_link, cars))
+    
+    num_with_links = sum(1 for car in enriched_cars if car.get('reviewLink'))
+    logger.info(f"Review link enrichment complete: {num_with_links}/{len(cars)} cars have review links")
+    
+    return enriched_cars
+
 def llm_decision_node(state: Dict) -> Dict:
     """LLM decides next action based on current state - makes the agent truly autonomous."""
     logger.debug(f"llm_decision_node received state: {state}")
@@ -348,7 +407,9 @@ def parallel_search_cars(query, min_price, max_price, num_queries=3):
     Run multiple diverse search queries in parallel for faster results.
     Returns combined suggestions from all queries.
     """
-    logger.info(f"Running {num_queries} parallel searches...")
+    import time
+    start_time = time.time()
+    logger.info(f"{num_queries} queries will run concurrently")
     
     price_range = f"${min_price//1000}k to ${max_price//1000}k"
     
@@ -361,10 +422,14 @@ def parallel_search_cars(query, min_price, max_price, num_queries=3):
         f"certified pre-owned luxury price {price_range}"
     ][:num_queries]
     
+    logger.info(f"Generated {len(queries)} parallel queries: {queries}")
+    
     all_suggestions = []
     
     def search_single_query(q):
         """Search a single query via SerpAPI."""
+        query_start = time.time()
+        logger.info(f"Thread starting SerpAPI call for: '{q}'")
         try:
             params = {
                 'engine': 'google',
@@ -411,17 +476,24 @@ def parallel_search_cars(query, min_price, max_price, num_queries=3):
                     
                     suggestions.append(suggestion)
             
-            logger.info(f"Query '{q[:50]}...' found {len(suggestions)} suggestions")
+            query_elapsed = time.time() - query_start
+            logger.info(f"Query '{q[:50]}...' completed in {query_elapsed:.2f}s, found {len(suggestions)} suggestions")
             return suggestions
             
         except Exception as e:
-            logger.error(f"Parallel search failed for '{q}': {e}")
+            query_elapsed = time.time() - query_start
+            logger.error(f"Parallel search failed for '{q}' after {query_elapsed:.2f}s: {e}")
             return []
     
     # Run searches in parallel using ThreadPoolExecutor
+    logger.info(f"Submitting {len(queries)} queries to ThreadPoolExecutor...")
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_queries) as executor:
         future_to_query = {executor.submit(search_single_query, q): q for q in queries}
+        completed_count = 0
         for future in concurrent.futures.as_completed(future_to_query):
+            completed_count += 1
+            query = future_to_query[future]
+            logger.info(f"Query {completed_count}/{len(queries)} completed: '{query[:50]}'")
             query_results = future.result()
             all_suggestions.extend(query_results)
     
@@ -434,7 +506,9 @@ def parallel_search_cars(query, min_price, max_price, num_queries=3):
             seen.add(key)
             unique_suggestions.append(sugg)
     
-    logger.info(f"Parallel search complete: {len(unique_suggestions)} unique suggestions from {len(all_suggestions)} total")
+    elapsed_time = time.time() - start_time
+    logger.info(f"PARALLEL SEARCH COMPLETE in {elapsed_time:.2f}s: {len(unique_suggestions)} unique suggestions from {len(all_suggestions)} total")
+    logger.info(f"Throughput: {len(unique_suggestions)/elapsed_time:.1f} unique cars/second")
     return unique_suggestions
 
 def get_car_suggestions(data):
@@ -509,21 +583,35 @@ def get_car_suggestions(data):
 
     # FAST HYBRID APPROACH: Run parallel searches + LLM suggestions concurrently
     # This is much faster than sequential LLM-driven iterations
-    logger.info("🚀 Using FAST HYBRID approach: Parallel searches + LLM suggestions")
+    logger.info("=" * 80)
+    logger.info("FAST HYBRID APPROACH ACTIVATED")
+    logger.info("=" * 80)
+    logger.info("Strategy: Parallel SerpAPI searches (4 queries) + LLM direct suggestions")
+    logger.info("Expected: Results in 2-5 seconds vs 30+ seconds for sequential")
+    
+    import time
+    hybrid_start = time.time()
     
     all_suggestions = []
     
     # Method 1: Get direct LLM recommendations (instant)
+    llm_start = time.time()
+    logger.info("Method 1: Requesting direct LLM car recommendations...")
     llm_suggestions = llm_suggest_cars(price, min_price, max_price, body_types, features)
+    llm_elapsed = time.time() - llm_start
     all_suggestions.extend(llm_suggestions)
-    logger.info(f"LLM direct: {len(llm_suggestions)} suggestions")
+    logger.info(f"LLM direct: {len(llm_suggestions)} suggestions in {llm_elapsed:.2f}s")
     
     # Method 2: Run parallel diverse searches (fast)
+    parallel_start = time.time()
+    logger.info("Method 2: Starting parallel SerpAPI searches...")
     parallel_suggestions = parallel_search_cars(query, min_price, max_price, num_queries=4)
+    parallel_elapsed = time.time() - parallel_start
     all_suggestions.extend(parallel_suggestions)
-    logger.info(f"Parallel search: {len(parallel_suggestions)} suggestions")
+    logger.info(f"Parallel search: {len(parallel_suggestions)} suggestions in {parallel_elapsed:.2f}s")
     
     # Deduplicate combined results
+    dedup_start = time.time()
     seen_models = set()
     unique_suggestions = []
     for sugg in all_suggestions:
@@ -531,8 +619,13 @@ def get_car_suggestions(data):
         if model_key not in seen_models:
             seen_models.add(model_key)
             unique_suggestions.append(sugg)
+    dedup_elapsed = time.time() - dedup_start
     
-    logger.info(f"Combined: {len(unique_suggestions)} unique suggestions")
+    hybrid_elapsed = time.time() - hybrid_start
+    logger.info(f"Deduplication: {len(all_suggestions)} → {len(unique_suggestions)} unique in {dedup_elapsed:.2f}s")
+    logger.info(f"TOTAL HYBRID TIME: {hybrid_elapsed:.2f}s")
+    logger.info(f"Final result: {len(unique_suggestions)} unique cars ready for ranking")
+    logger.info("=" * 80)
     
     # If we got suggestions from fast methods, skip slow LLM-driven workflow
     if len(unique_suggestions) >= 5:
@@ -582,14 +675,18 @@ def get_car_suggestions(data):
         logger.info(f"After deduplication: {len(unique_suggestions)} unique make/model/year combinations (from {len(suggestions)})")
         suggestions = unique_suggestions
         
-        # 3. Calculate weights
+        # 3. Enrich with review links (Agent Research)
+        logger.info("Step 3: Enriching cars with review links for Agent Research...")
+        suggestions = enrich_with_review_links(suggestions)
+        
+        # 4. Calculate weights
         weights = prefs.get_preference_weights(suggestions)
         
-        # 4. Sort suggestions by weight
+        # 5. Sort suggestions by weight
         weighted_suggestions = list(zip(suggestions, weights))
         weighted_suggestions.sort(key=lambda x: x[1], reverse=True)
         
-        # 5. Return sorted suggestions with weights
+        # 6. Return sorted suggestions with weights and review links
         return {
             'suggestions': [
                 {**sugg, 'weight': weight} 

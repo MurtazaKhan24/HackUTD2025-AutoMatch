@@ -88,87 +88,101 @@ const CarCard = ({
           )}
         </div>
 
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button variant="outline" size="sm" className="mb-4">
-              <Info className="w-4 h-4 mr-2" />
-              More Details
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{car.year} {car.make} {car.model} {car.trim}</DialogTitle>
-              <DialogDescription>
-                <div className="mt-4 space-y-4">
-                  {car.specs?.engine && (
-                    <div>
-                      <h4 className="font-semibold">Engine</h4>
-                      <p>{car.specs.engine}</p>
-                    </div>
-                  )}
-                  
-                  {car.features?.length > 0 && (
-                    <div>
-                      <h4 className="font-semibold">Key Features</h4>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {car.features.slice(0, 6).map((feature, i) => (
-                          <Badge key={i} variant="secondary">{feature}</Badge>
-                        ))}
+        <div className="flex gap-2">
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" className="mb-4">
+                <Info className="w-4 h-4 mr-2" />
+                More Details
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{car.year} {car.make} {car.model} {car.trim}</DialogTitle>
+                <DialogDescription>
+                  <div className="mt-4 space-y-4">
+                    {car.specs?.engine && (
+                      <div>
+                        <h4 className="font-semibold">Engine</h4>
+                        <p>{car.specs.engine}</p>
+                      </div>
+                    )}
+                    
+                    {car.features?.length > 0 && (
+                      <div>
+                        <h4 className="font-semibold">Key Features</h4>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {car.features.slice(0, 6).map((feature, i) => (
+                            <Badge key={i} variant="secondary">{feature}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <h4 className="font-semibold flex items-center">
+                          <ThumbsUp className="w-4 h-4 mr-2 text-green-500" />
+                          Pros
+                        </h4>
+                        <ul className="list-disc list-inside mt-2">
+                          {car.pros?.slice(0, 3).map((pro, i) => (
+                            <li key={i} className="text-sm">{pro}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div>
+                        <h4 className="font-semibold flex items-center">
+                          <ThumbsDown className="w-4 h-4 mr-2 text-red-500" />
+                          Cons
+                        </h4>
+                        <ul className="list-disc list-inside mt-2">
+                          {car.cons?.slice(0, 3).map((con, i) => (
+                            <li key={i} className="text-sm">{con}</li>
+                          ))}
+                        </ul>
                       </div>
                     </div>
-                  )}
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <h4 className="font-semibold flex items-center">
-                        <ThumbsUp className="w-4 h-4 mr-2 text-green-500" />
-                        Pros
-                      </h4>
-                      <ul className="list-disc list-inside mt-2">
-                        {car.pros?.slice(0, 3).map((pro, i) => (
-                          <li key={i} className="text-sm">{pro}</li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold flex items-center">
-                        <ThumbsDown className="w-4 h-4 mr-2 text-red-500" />
-                        Cons
-                      </h4>
-                      <ul className="list-disc list-inside mt-2">
-                        {car.cons?.slice(0, 3).map((con, i) => (
-                          <li key={i} className="text-sm">{con}</li>
-                        ))}
-                      </ul>
-                    </div>
+                    
+                    {car.safety_rating && (
+                      <div>
+                        <h4 className="font-semibold flex items-center">
+                          <Star className="w-4 h-4 mr-2 text-yellow-500" />
+                          Safety Rating
+                        </h4>
+                        <div className="flex items-center mt-2">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <Star
+                              key={i}
+                              className={cn(
+                                "w-5 h-5",
+                                i < car.safety_rating 
+                                  ? "text-yellow-500 fill-yellow-500" 
+                                  : "text-gray-300"
+                              )}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  
-                  {car.safety_rating && (
-                    <div>
-                      <h4 className="font-semibold flex items-center">
-                        <Star className="w-4 h-4 mr-2 text-yellow-500" />
-                        Safety Rating
-                      </h4>
-                      <div className="flex items-center mt-2">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <Star
-                            key={i}
-                            className={cn(
-                              "w-5 h-5",
-                              i < car.safety_rating 
-                                ? "text-yellow-500 fill-yellow-500" 
-                                : "text-gray-300"
-                            )}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </DialogDescription>
-            </DialogHeader>
-          </DialogContent>
-        </Dialog>
+                </DialogDescription>
+              </DialogHeader>
+            </DialogContent>
+          </Dialog>
+
+          {car.reviewLink && (
+            <Button 
+              variant="default" 
+              size="sm" 
+              className="mb-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+              onClick={() => window.open(car.reviewLink, '_blank')}
+            >
+              <Star className="w-4 h-4 mr-2" />
+              Agent Research
+            </Button>
+          )}
+        </div>
 
         <p className="text-gray-600 line-clamp-3">
           {car.pros?.[0] || `${car.year} ${car.make} ${car.model} ${car.trim || ''}`}

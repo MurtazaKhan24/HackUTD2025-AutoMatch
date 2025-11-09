@@ -2,19 +2,34 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ChevronLeft, Heart, Trash2 } from "lucide-react";
+import { ChevronLeft, Heart, Trash2, Star } from "lucide-react";
 import { toast } from "sonner";
 
+// Use the same interface as Swipe page
 interface Car {
-  id: number;
   make: string;
   model: string;
-  year: number;
-  price: number;
-  image: string;
-  mileage: number;
-  transmission: string;
-  bodyType: string;
+  year: string | number;
+  price?: {
+    marketValue?: number;
+  };
+  photos?: string[];
+  url?: string;
+  source?: string;
+  specs?: {
+    mpg?: string;
+    horsepower?: number;
+    transmission?: string;
+    drivetrain?: string;
+    engine?: string;
+  };
+  trim?: string;
+  features?: string[];
+  pros?: string[];
+  cons?: string[];
+  safety_rating?: number;
+  weight?: number;
+  reviewLink?: string;
 }
 
 const Liked = () => {
@@ -24,12 +39,17 @@ const Liked = () => {
   useEffect(() => {
     const stored = localStorage.getItem("likedCars");
     if (stored) {
-      setLikedCars(JSON.parse(stored));
+      try {
+        setLikedCars(JSON.parse(stored));
+      } catch (error) {
+        console.error("Failed to parse liked cars:", error);
+        setLikedCars([]);
+      }
     }
   }, []);
 
-  const handleRemove = (carId: number) => {
-    const updated = likedCars.filter(car => car.id !== carId);
+  const handleRemove = (index: number) => {
+    const updated = likedCars.filter((_, i) => i !== index);
     setLikedCars(updated);
     localStorage.setItem("likedCars", JSON.stringify(updated));
     toast.success("Removed from favorites");
@@ -69,11 +89,11 @@ const Liked = () => {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {likedCars.map((car) => (
-              <Card key={car.id} className="overflow-hidden shadow-card hover:shadow-elevated transition-shadow">
+            {likedCars.map((car, index) => (
+              <Card key={index} className="overflow-hidden shadow-card hover:shadow-elevated transition-shadow">
                 <div className="relative h-48">
                   <img
-                    src={car.image}
+                    src={car.photos?.[0] || '/placeholder.svg'}
                     alt={`${car.make} ${car.model}`}
                     className="w-full h-full object-cover"
                   />
@@ -81,7 +101,7 @@ const Liked = () => {
                     size="icon"
                     variant="destructive"
                     className="absolute top-2 right-2 h-8 w-8 rounded-full"
-                    onClick={() => handleRemove(car.id)}
+                    onClick={() => handleRemove(index)}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -89,17 +109,38 @@ const Liked = () => {
                 <div className="p-4">
                   <h3 className="text-xl font-bold mb-1">
                     {car.year} {car.make} {car.model}
+                    {car.trim && <span className="text-base ml-2 text-gray-500">{car.trim}</span>}
                   </h3>
                   <p className="text-2xl font-semibold text-automotive-blue mb-3">
-                    ${car.price.toLocaleString()}
+                    ${car.price?.marketValue?.toLocaleString() || 'Contact for price'}
                   </p>
-                  <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
-                    <span>{car.mileage.toLocaleString()} miles</span>
-                    <span>•</span>
-                    <span className="capitalize">{car.transmission}</span>
-                    <span>•</span>
-                    <span className="capitalize">{car.bodyType}</span>
+                  <div className="flex flex-wrap gap-2 text-sm text-muted-foreground mb-3">
+                    {car.specs?.transmission && (
+                      <>
+                        <span className="capitalize">{car.specs.transmission}</span>
+                        <span>•</span>
+                      </>
+                    )}
+                    {car.specs?.mpg && (
+                      <>
+                        <span>{car.specs.mpg} MPG</span>
+                        <span>•</span>
+                      </>
+                    )}
+                    {car.specs?.drivetrain && (
+                      <span className="capitalize">{car.specs.drivetrain}</span>
+                    )}
                   </div>
+                  {car.reviewLink && (
+                    <Button 
+                      size="sm" 
+                      className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                      onClick={() => window.open(car.reviewLink, '_blank')}
+                    >
+                      <Star className="w-4 h-4 mr-2" />
+                      Agent Research
+                    </Button>
+                  )}
                 </div>
               </Card>
             ))}

@@ -4,6 +4,7 @@ export interface Car {
   year: number;
   url?: string;
   source?: string;
+  reviewLink?: string;  // Agent research link
 }
 
 export interface CarDetails extends Car {
@@ -24,4 +25,5 @@ export interface CarDetails extends Car {
   price: {
     marketValue: number;
   };
+  reviewLink?: string;  // Agent research link
 }
