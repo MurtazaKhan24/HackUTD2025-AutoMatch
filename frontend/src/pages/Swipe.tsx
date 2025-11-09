@@ -12,7 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { fetchVehicleListingByVIN, searchVehicleListings, VehicleListingDetails } from "@/lib/autodev-api";
+import { fetchVehicleListingByVIN, searchVehicleListings, VehicleListingDetails, fetchActualListingUrl } from "@/lib/autodev-api";
 
 interface Car {
   make: string;
@@ -182,6 +182,18 @@ const Swipe = () => {
     try {
       let details: VehicleListingDetails | null = null;
       
+      // Get zipcode from finance preferences
+      const financePrefs = localStorage.getItem("financePreferences");
+      let zipcode = "75080"; // Default zipcode
+      if (financePrefs) {
+        try {
+          const prefs = JSON.parse(financePrefs);
+          zipcode = prefs.zipcode || zipcode;
+        } catch (e) {
+          console.error("Failed to parse finance preferences");
+        }
+      }
+      
       // First try by VIN if available
       if (currentCar.vin) {
         details = await fetchVehicleListingByVIN(currentCar.vin);
@@ -189,17 +201,6 @@ const Swipe = () => {
       
       // If no VIN or VIN lookup failed, try searching by year/make/model
       if (!details) {
-        const financePrefs = localStorage.getItem("financePreferences");
-        let zipcode = "75080"; // Default zipcode
-        if (financePrefs) {
-          try {
-            const prefs = JSON.parse(financePrefs);
-            zipcode = prefs.zipcode || zipcode;
-          } catch (e) {
-            console.error("Failed to parse finance preferences");
-          }
-        }
-        
         const listings = await searchVehicleListings(
           Number(currentCar.year),
           currentCar.make,
@@ -213,10 +214,24 @@ const Swipe = () => {
         }
       }
       
+      // If we found details with a listing URL, update the car object
       if (details) {
         setListingDetails(details);
         // Cache it in the car object
         currentCar.listingDetails = details;
+        
+        // IMPORTANT: Update the car's URL with the actual dealer listing URL
+        if (details.listingUrl) {
+          currentCar.url = details.listingUrl;
+          console.log(`✓ Updated car URL with actual listing: ${details.listingUrl}`);
+        }
+      } else {
+        // Even if no full details, try to get just the listing URL
+        const actualUrl = await fetchActualListingUrl(currentCar, zipcode);
+        if (actualUrl && actualUrl !== currentCar.url) {
+          currentCar.url = actualUrl;
+          console.log(`✓ Updated car URL with actual listing (URL only): ${actualUrl}`);
+        }
       }
     } catch (error) {
       console.error("Error fetching listing details:", error);

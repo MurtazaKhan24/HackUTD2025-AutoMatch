@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { fetchVehicleListingByVIN, searchVehicleListings, VehicleListingDetails } from "@/lib/autodev-api";
+import { fetchVehicleListingByVIN, searchVehicleListings, VehicleListingDetails, fetchActualListingUrl } from "@/lib/autodev-api";
 
 // Use the same interface as Swipe page
 interface Car {
@@ -87,6 +87,18 @@ const Liked = () => {
     try {
       let details: VehicleListingDetails | null = null;
       
+      // Get zipcode from finance preferences
+      const financePrefs = localStorage.getItem("financePreferences");
+      let zipcode = "75080"; // Default zipcode
+      if (financePrefs) {
+        try {
+          const prefs = JSON.parse(financePrefs);
+          zipcode = prefs.zipcode || zipcode;
+        } catch (e) {
+          console.error("Failed to parse finance preferences");
+        }
+      }
+      
       // First try by VIN if available
       if (car.vin) {
         details = await fetchVehicleListingByVIN(car.vin);
@@ -94,17 +106,6 @@ const Liked = () => {
       
       // If no VIN or VIN lookup failed, try searching by year/make/model
       if (!details) {
-        const financePrefs = localStorage.getItem("financePreferences");
-        let zipcode = "75080"; // Default zipcode
-        if (financePrefs) {
-          try {
-            const prefs = JSON.parse(financePrefs);
-            zipcode = prefs.zipcode || zipcode;
-          } catch (e) {
-            console.error("Failed to parse finance preferences");
-          }
-        }
-        
         const listings = await searchVehicleListings(
           Number(car.year),
           car.make,
@@ -118,15 +119,38 @@ const Liked = () => {
         }
       }
       
+      // If we found details with a listing URL, update the car object
       if (details) {
         setListingDetails(details);
         // Cache it in the car object
         car.listingDetails = details;
-        // Update localStorage
-        const updatedCars = likedCars.map(c => 
-          c.make === car.make && c.model === car.model && c.year === car.year ? car : c
-        );
-        localStorage.setItem("likedCars", JSON.stringify(updatedCars));
+        
+        // IMPORTANT: Update the car's URL with the actual dealer listing URL
+        if (details.listingUrl) {
+          car.url = details.listingUrl;
+          console.log(`✓ Updated car URL with actual listing: ${details.listingUrl}`);
+          
+          // Update localStorage with the new URL
+          const updatedCars = likedCars.map(c => 
+            c.make === car.make && c.model === car.model && c.year === car.year ? car : c
+          );
+          setLikedCars(updatedCars);
+          localStorage.setItem("likedCars", JSON.stringify(updatedCars));
+        }
+      } else {
+        // Even if no full details, try to get just the listing URL
+        const actualUrl = await fetchActualListingUrl(car, zipcode);
+        if (actualUrl && actualUrl !== car.url) {
+          car.url = actualUrl;
+          console.log(`✓ Updated car URL with actual listing (URL only): ${actualUrl}`);
+          
+          // Update localStorage with the new URL
+          const updatedCars = likedCars.map(c => 
+            c.make === car.make && c.model === car.model && c.year === car.year ? car : c
+          );
+          setLikedCars(updatedCars);
+          localStorage.setItem("likedCars", JSON.stringify(updatedCars));
+        }
       }
     } catch (error) {
       console.error("Error fetching listing details:", error);

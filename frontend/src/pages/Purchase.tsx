@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ChevronLeft, Phone, Mail, FileText, Calculator, Shield, CheckCircle, ExternalLink, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { fetchActualListingUrl } from "@/lib/autodev-api";
 import {
   Table,
   TableBody,
@@ -17,11 +18,13 @@ interface Car {
   make: string;
   model: string;
   year: string | number;
+  vin?: string;
   price?: {
     marketValue?: number;
   };
   photos?: string[];
   url?: string;
+  actualListingUrl?: string;
   source?: string;
   specs?: {
     mpg?: string;
@@ -153,6 +156,8 @@ const Purchase = () => {
   
   const [vehicleHistoryData, setVehicleHistoryData] = useState<VehicleHistoryData | null>(null);
   const [loadingVehicleHistory, setLoadingVehicleHistory] = useState<boolean>(false);
+  
+  const [loadingDealerListing, setLoadingDealerListing] = useState<boolean>(false);
   
   // Visibility states - controls whether data is shown to user
   const [showFinancing, setShowFinancing] = useState<boolean>(false);
@@ -456,14 +461,90 @@ const Purchase = () => {
     setAmortizationSchedule(schedule);
   };
 
-  const handleViewDealerListing = () => {
-    // TODO: Implement actual link to dealer listing
-    // For now, just show a placeholder
-    if (car?.url) {
-      window.open(car.url, '_blank');
-    } else {
-      // Placeholder - would link to actual dealer listing
-      console.log("Navigate to dealer listing for:", car);
+  const handleViewDealerListing = async () => {
+    if (!car) return;
+    
+    // If we already have the actual listing URL cached, open it
+    if (car.actualListingUrl) {
+      window.open(car.actualListingUrl, '_blank');
+      return;
+    }
+    
+    // Otherwise, fetch it from Auto.dev API
+    setLoadingDealerListing(true);
+    toast({
+      title: "Finding Dealer Listing",
+      description: "Fetching the actual dealer posting URL...",
+    });
+    
+    try {
+      const actualUrl = await fetchActualListingUrl(
+        {
+          year: car.year,
+          make: car.make,
+          model: car.model,
+          vin: car.vin,
+          url: car.url,
+        },
+        financePrefs?.zipcode
+      );
+      
+      if (actualUrl) {
+        // Cache the actual URL in the car object
+        car.actualListingUrl = actualUrl;
+        
+        // Update localStorage with the new URL
+        const carKey = `${car.year}_${car.make}_${car.model}`.replace(/\s+/g, '_');
+        const likedCarsKey = 'likedCars';
+        const likedCarsStr = localStorage.getItem(likedCarsKey);
+        
+        if (likedCarsStr) {
+          try {
+            const likedCars = JSON.parse(likedCarsStr);
+            const carIndex = likedCars.findIndex((c: Car) => 
+              c.year === car.year && c.make === car.make && c.model === car.model
+            );
+            
+            if (carIndex !== -1) {
+              likedCars[carIndex].actualListingUrl = actualUrl;
+              localStorage.setItem(likedCarsKey, JSON.stringify(likedCars));
+            }
+          } catch (error) {
+            console.error("Failed to update liked cars:", error);
+          }
+        }
+        
+        // Open the actual listing URL
+        window.open(actualUrl, '_blank');
+        
+        toast({
+          title: "Dealer Listing Found",
+          description: "Opening the actual dealer posting...",
+        });
+      } else {
+        // Fallback to original URL or Google search
+        const fallbackUrl = car.url || `https://www.google.com/search?q=${car.year}+${car.make}+${car.model}+for+sale`;
+        window.open(fallbackUrl, '_blank');
+        
+        toast({
+          title: "Using Search Results",
+          description: "Could not find the exact dealer listing. Opening search results instead.",
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching dealer listing:", error);
+      
+      // Fallback to original URL or Google search
+      const fallbackUrl = car.url || `https://www.google.com/search?q=${car.year}+${car.make}+${car.model}+for+sale`;
+      window.open(fallbackUrl, '_blank');
+      
+      toast({
+        title: "Error",
+        description: "Could not fetch dealer listing. Opening search results instead.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingDealerListing(false);
     }
   };
 
@@ -826,9 +907,19 @@ const Purchase = () => {
               <Button 
                 className="w-full mt-4" 
                 onClick={handleViewDealerListing}
+                disabled={loadingDealerListing}
               >
-                <ExternalLink className="w-4 h-4 mr-2" />
-                View Dealer Listing
+                {loadingDealerListing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Finding Listing...
+                  </>
+                ) : (
+                  <>
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    View Dealer Listing
+                  </>
+                )}
               </Button>
             </div>
           </div>
