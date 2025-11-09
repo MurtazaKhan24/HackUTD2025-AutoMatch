@@ -49,9 +49,18 @@ const PhysicalPreferences = () => {
     localStorage.removeItem("likedCars");
     
     localStorage.setItem("carPreferences", JSON.stringify(carPreferences));
-
-    // Show loading toast while fetching car suggestions
-    const loadingToast = toast.loading("Finding your perfect cars...");
+    
+    setTimeout(() => {
+      toast.info("Generating personalized recommendations...");
+    }, 1200);
+    
+    setTimeout(() => {
+      toast.info("Finding dealer listings and pricing...");
+    }, 1800);
+    
+    setTimeout(() => {
+      toast.info("Gathering expert reviews and ratings...");
+    }, 2400);
 
     try {
       // Fetch car suggestions from backend
@@ -76,17 +85,14 @@ const PhysicalPreferences = () => {
       if (data.suggestions && data.suggestions.length > 0) {
         // Store suggestions in localStorage to pass to Swipe page
         localStorage.setItem("carSuggestions", JSON.stringify(data.suggestions));
-        toast.dismiss(loadingToast);
-        toast.success(`Found ${data.suggestions.length} cars for you!`);
+        toast.success(`Found ${data.suggestions.length} perfect matches for you!`);
         navigate("/swipe");
       } else {
-        toast.dismiss(loadingToast);
         toast.error("No cars found matching your preferences. Try adjusting your criteria.");
       }
     } catch (error) {
       console.error("Failed to load car suggestions:", error);
-      toast.dismiss(loadingToast);
-      toast.error("Failed to connect to backend. Make sure the server is running on port 5000.");
+      toast.error("Failed to connect to backend. Make sure the server is running on port 5001.");
     }
   };
 

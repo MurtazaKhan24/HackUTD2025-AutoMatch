@@ -5,6 +5,10 @@ from app.routes.shortlist import shortlist_bp
 from app.routes.listings import listings_bp
 from app.routes.search import search
 from app.routes.swipe import swipe
+from app.routes.financing import financing
+from app.routes.inspection import inspection
+from app.routes.insurance import insurance
+from app.routes.vehicle_history import vehicle_history
 import logging
 
 # Configure logging
@@ -47,6 +51,10 @@ app.register_blueprint(shortlist_bp, url_prefix='/api/search')
 app.register_blueprint(listings_bp, url_prefix='/api/listings')
 app.register_blueprint(search)  # Search routes have full /api/search/suggestions path
 app.register_blueprint(swipe)  # Swipe routes have full /api/swipe path
+app.register_blueprint(financing)  # Financing routes have full /api/financing path
+app.register_blueprint(inspection)  # Inspection routes have full /api/inspection path
+app.register_blueprint(insurance)  # Insurance routes have full /api/insurance path
+app.register_blueprint(vehicle_history)  # Vehicle history routes have full /api/vehicle-history path
 
 # Debug: Print all registered routes
 with app.app_context():

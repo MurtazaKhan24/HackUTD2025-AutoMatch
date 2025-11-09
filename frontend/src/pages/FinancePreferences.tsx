@@ -5,6 +5,8 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { Toggle } from "@/components/ui/toggle";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 
 const FinancePreferences = () => {
@@ -14,6 +16,8 @@ const FinancePreferences = () => {
   const [financing, setFinancing] = useState<'finance' | 'cash'>('finance');
   const [loanTerm, setLoanTerm] = useState(60); // months, default 60
   const [downPayment, setDownPayment] = useState(0);
+  const [zipcode, setZipcode] = useState("75080");
+  const [creditScore, setCreditScore] = useState("good");
 
   const monthlyMin = 200;
   const monthlyMax = 2000;
@@ -37,7 +41,9 @@ const FinancePreferences = () => {
       budget: budget[0],
       financing,
       loanTerm,
-      downPayment
+      downPayment,
+      zipcode,
+      creditScore
     }));
     navigate("/preferences/physical");
 
@@ -46,7 +52,7 @@ const FinancePreferences = () => {
       budget: budget[0],
       payment: financing === 'finance' ? 'loan' : 'cash',
       state: 'TX', // TODO: get from user or location
-      zipcode: '75080', // TODO: get from user or location
+      zipcode: zipcode,
       down_payment: downPayment.toString(),
       apr: financing === 'finance' ? '5.9' : '0', // TODO: get from user if needed
       term_months: financing === 'finance' ? loanTerm.toString() : '0'
@@ -76,7 +82,7 @@ const FinancePreferences = () => {
           <h1 className="text-4xl font-bold bg-gradient-to-r from-automotive-blue to-automotive-silver bg-clip-text text-transparent mb-2">
             AutoSwipe
           </h1>
-          <p className="text-muted-foreground">Step 1: Finance Preferences</p>
+          <p className="text-muted-foreground">Democratize auto finance</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -181,6 +187,45 @@ const FinancePreferences = () => {
                 className="w-full px-4 py-2 rounded border border-automotive-silver focus:outline-none focus:ring-2 focus:ring-automotive-blue"
                 placeholder="Enter down payment amount"
               />
+            </div>
+          )}
+
+          {/* Zipcode input */}
+          <div className="space-y-2">
+            <Label htmlFor="zipcode" className="text-base font-semibold">
+              Zipcode
+            </Label>
+            <Input
+              id="zipcode"
+              type="text"
+              value={zipcode}
+              onChange={e => setZipcode(e.target.value)}
+              placeholder="Enter your zipcode"
+              maxLength={5}
+              pattern="[0-9]{5}"
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground">Used to find local financing options</p>
+          </div>
+
+          {/* Credit Score range selector */}
+          {financing === "finance" && (
+            <div className="space-y-2">
+              <Label htmlFor="creditScore" className="text-base font-semibold">
+                Credit Score Range
+              </Label>
+              <Select value={creditScore} onValueChange={setCreditScore}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select credit score range" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="excellent">Excellent (720+)</SelectItem>
+                  <SelectItem value="good">Good (680-719)</SelectItem>
+                  <SelectItem value="fair">Fair (630-679)</SelectItem>
+                  <SelectItem value="poor">Poor (Below 630)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">Helps estimate your interest rate</p>
             </div>
           )}
 
