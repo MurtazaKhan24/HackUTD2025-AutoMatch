@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ChevronLeft, Phone, Mail, FileText, Calculator, Shield, CheckCircle, ExternalLink, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { fetchActualListingUrl } from "@/lib/autodev-api";
 import {
   Table,
   TableBody,
@@ -156,8 +155,6 @@ const Purchase = () => {
   
   const [vehicleHistoryData, setVehicleHistoryData] = useState<VehicleHistoryData | null>(null);
   const [loadingVehicleHistory, setLoadingVehicleHistory] = useState<boolean>(false);
-  
-  const [loadingDealerListing, setLoadingDealerListing] = useState<boolean>(false);
   
   // Visibility states - controls whether data is shown to user
   const [showFinancing, setShowFinancing] = useState<boolean>(false);
@@ -461,90 +458,75 @@ const Purchase = () => {
     setAmortizationSchedule(schedule);
   };
 
-  const handleViewDealerListing = async () => {
+  const handleViewManufacturerSite = () => {
     if (!car) return;
     
-    // If we already have the actual listing URL cached, open it
-    if (car.actualListingUrl) {
-      window.open(car.actualListingUrl, '_blank');
-      return;
-    }
+    // Get manufacturer website based on car make
+    const manufacturerWebsites: { [key: string]: string } = {
+      'toyota': 'https://www.toyota.com',
+      'honda': 'https://www.honda.com',
+      'ford': 'https://www.ford.com',
+      'chevrolet': 'https://www.chevrolet.com',
+      'chevy': 'https://www.chevrolet.com',
+      'nissan': 'https://www.nissanusa.com',
+      'mazda': 'https://www.mazdausa.com',
+      'subaru': 'https://www.subaru.com',
+      'hyundai': 'https://www.hyundaiusa.com',
+      'kia': 'https://www.kia.com',
+      'volkswagen': 'https://www.vw.com',
+      'vw': 'https://www.vw.com',
+      'bmw': 'https://www.bmwusa.com',
+      'mercedes': 'https://www.mbusa.com',
+      'mercedes-benz': 'https://www.mbusa.com',
+      'audi': 'https://www.audiusa.com',
+      'lexus': 'https://www.lexus.com',
+      'acura': 'https://www.acura.com',
+      'infiniti': 'https://www.infinitiusa.com',
+      'jeep': 'https://www.jeep.com',
+      'ram': 'https://www.ramtrucks.com',
+      'dodge': 'https://www.dodge.com',
+      'chrysler': 'https://www.chrysler.com',
+      'buick': 'https://www.buick.com',
+      'gmc': 'https://www.gmc.com',
+      'cadillac': 'https://www.cadillac.com',
+      'tesla': 'https://www.tesla.com',
+      'volvo': 'https://www.volvocars.com/us',
+      'porsche': 'https://www.porsche.com/usa',
+      'genesis': 'https://www.genesis.com',
+      'mini': 'https://www.miniusa.com',
+      'lincoln': 'https://www.lincoln.com',
+      'alfa romeo': 'https://www.alfaromeousa.com',
+      'fiat': 'https://www.fiatusa.com',
+      'jaguar': 'https://www.jaguarusa.com',
+      'land rover': 'https://www.landroverusa.com',
+      'maserati': 'https://www.maserati.com/us',
+      'mitsubishi': 'https://www.mitsubishicars.com',
+      'bentley': 'https://www.bentleymotors.com',
+      'rolls-royce': 'https://www.rolls-roycemotorcars.com',
+      'ferrari': 'https://www.ferrari.com',
+      'lamborghini': 'https://www.lamborghini.com',
+      'aston martin': 'https://www.astonmartin.com',
+      'lotus': 'https://www.lotuscars.com',
+      'mclaren': 'https://cars.mclaren.com',
+    };
     
-    // Otherwise, fetch it from Auto.dev API
-    setLoadingDealerListing(true);
-    toast({
-      title: "Finding Dealer Listing",
-      description: "Fetching the actual dealer posting URL...",
-    });
+    const makeLower = car.make.toLowerCase().trim();
+    const manufacturerUrl = manufacturerWebsites[makeLower];
     
-    try {
-      const actualUrl = await fetchActualListingUrl(
-        {
-          year: car.year,
-          make: car.make,
-          model: car.model,
-          vin: car.vin,
-          url: car.url,
-        },
-        financePrefs?.zipcode
-      );
-      
-      if (actualUrl) {
-        // Cache the actual URL in the car object
-        car.actualListingUrl = actualUrl;
-        
-        // Update localStorage with the new URL
-        const carKey = `${car.year}_${car.make}_${car.model}`.replace(/\s+/g, '_');
-        const likedCarsKey = 'likedCars';
-        const likedCarsStr = localStorage.getItem(likedCarsKey);
-        
-        if (likedCarsStr) {
-          try {
-            const likedCars = JSON.parse(likedCarsStr);
-            const carIndex = likedCars.findIndex((c: Car) => 
-              c.year === car.year && c.make === car.make && c.model === car.model
-            );
-            
-            if (carIndex !== -1) {
-              likedCars[carIndex].actualListingUrl = actualUrl;
-              localStorage.setItem(likedCarsKey, JSON.stringify(likedCars));
-            }
-          } catch (error) {
-            console.error("Failed to update liked cars:", error);
-          }
-        }
-        
-        // Open the actual listing URL
-        window.open(actualUrl, '_blank');
-        
-        toast({
-          title: "Dealer Listing Found",
-          description: "Opening the actual dealer posting...",
-        });
-      } else {
-        // Fallback to original URL or Google search
-        const fallbackUrl = car.url || `https://www.google.com/search?q=${car.year}+${car.make}+${car.model}+for+sale`;
-        window.open(fallbackUrl, '_blank');
-        
-        toast({
-          title: "Using Search Results",
-          description: "Could not find the exact dealer listing. Opening search results instead.",
-        });
-      }
-    } catch (error) {
-      console.error("Error fetching dealer listing:", error);
-      
-      // Fallback to original URL or Google search
-      const fallbackUrl = car.url || `https://www.google.com/search?q=${car.year}+${car.make}+${car.model}+for+sale`;
-      window.open(fallbackUrl, '_blank');
-      
+    if (manufacturerUrl) {
+      window.open(manufacturerUrl, '_blank');
       toast({
-        title: "Error",
-        description: "Could not fetch dealer listing. Opening search results instead.",
-        variant: "destructive",
+        title: "Opening Manufacturer Website",
+        description: `Visit ${car.make}'s official website for more information.`,
       });
-    } finally {
-      setLoadingDealerListing(false);
+    } else {
+      // Fallback to search for the car
+      const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(car.year + ' ' + car.make + ' ' + car.model)}`;
+      window.open(searchUrl, '_blank');
+      toast({
+        title: "Searching Online",
+        description: `Finding more information about the ${car.year} ${car.make} ${car.model}.`,
+      });
     }
   };
 
@@ -906,20 +888,10 @@ const Purchase = () => {
               </div>
               <Button 
                 className="w-full mt-4" 
-                onClick={handleViewDealerListing}
-                disabled={loadingDealerListing}
+                onClick={handleViewManufacturerSite}
               >
-                {loadingDealerListing ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Finding Listing...
-                  </>
-                ) : (
-                  <>
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    View Dealer Listing
-                  </>
-                )}
+                <ExternalLink className="w-4 h-4 mr-2" />
+                Visit {car.make} Website
               </Button>
             </div>
           </div>
@@ -1535,16 +1507,36 @@ const Purchase = () => {
         <Card className="p-6 mt-6">
           <h3 className="text-xl font-semibold mb-4">Helpful Resources</h3>
           <div className="space-y-3">
-            <Button variant="ghost" className="w-full justify-start">
+            <Button 
+              variant="ghost" 
+              className="w-full justify-start"
+              onClick={() => window.open('https://www.consumerreports.org/cars/buying-a-car/how-to-negotiate-car-price/', '_blank')}
+            >
+              <ExternalLink className="w-4 h-4 mr-2" />
               📝 Negotiation Tips and Strategies
             </Button>
-            <Button variant="ghost" className="w-full justify-start">
+            <Button 
+              variant="ghost" 
+              className="w-full justify-start"
+              onClick={() => window.open('https://www.bankrate.com/loans/auto-loans/auto-loan-calculator/', '_blank')}
+            >
+              <ExternalLink className="w-4 h-4 mr-2" />
               💰 Financing Calculator
             </Button>
-            <Button variant="ghost" className="w-full justify-start">
+            <Button 
+              variant="ghost" 
+              className="w-full justify-start"
+              onClick={() => window.open('https://www.edmunds.com/car-buying/10-steps-to-buying-a-new-car.html', '_blank')}
+            >
+              <ExternalLink className="w-4 h-4 mr-2" />
               📋 Purchase Checklist
             </Button>
-            <Button variant="ghost" className="w-full justify-start">
+            <Button 
+              variant="ghost" 
+              className="w-full justify-start"
+              onClick={() => window.open('https://www.ftc.gov/business-guidance/resources/buying-used-car', '_blank')}
+            >
+              <ExternalLink className="w-4 h-4 mr-2" />
               ⚖️ Your Rights as a Buyer
             </Button>
           </div>

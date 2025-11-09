@@ -50,19 +50,16 @@ const PhysicalPreferences = () => {
     
     localStorage.setItem("carPreferences", JSON.stringify(carPreferences));
     
-    setTimeout(() => {
-      toast.info("Generating personalized recommendations...");
-    }, 1200);
+    // Initialize empty suggestions array - we'll add to it progressively
+    const suggestions: any[] = [];
+    localStorage.setItem("carSuggestions", JSON.stringify(suggestions));
     
-    setTimeout(() => {
-      toast.info("Finding dealer listings and pricing...");
-    }, 1800);
-    
-    setTimeout(() => {
-      toast.info("Gathering expert reviews and ratings...");
-    }, 2400);
+    toast.info("Generating personalized recommendations...");
 
     try {
+      // Navigate to swipe page immediately (it will show loading state)
+      navigate("/swipe");
+      
       // Fetch car suggestions from backend
       const response = await fetch('http://localhost:5001/api/search/suggestions', {
         method: 'POST',
@@ -83,10 +80,15 @@ const PhysicalPreferences = () => {
       }
       
       if (data.suggestions && data.suggestions.length > 0) {
-        // Store suggestions in localStorage to pass to Swipe page
+        // Store all suggestions in localStorage
         localStorage.setItem("carSuggestions", JSON.stringify(data.suggestions));
+        
+        // Dispatch custom event to notify Swipe page of new cars
+        window.dispatchEvent(new CustomEvent('carSuggestionsUpdated', {
+          detail: { suggestions: data.suggestions }
+        }));
+        
         toast.success(`Found ${data.suggestions.length} perfect matches for you!`);
-        navigate("/swipe");
       } else {
         toast.error("No cars found matching your preferences. Try adjusting your criteria.");
       }
@@ -101,9 +103,9 @@ const PhysicalPreferences = () => {
       <Card className="w-full max-w-2xl p-8 bg-card shadow-elevated">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-automotive-blue to-automotive-silver bg-clip-text text-transparent mb-2">
-            AutoSwipe
+            CarTender
           </h1>
-          <p className="text-muted-foreground">Step 2: Car Preferences</p>
+          <p className="text-muted-foreground">Select your must-haves!</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">

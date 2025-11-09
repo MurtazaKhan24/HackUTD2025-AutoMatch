@@ -66,21 +66,26 @@ const Swipe = () => {
   useEffect(() => {
     // Load car suggestions from localStorage (already fetched in PhysicalPreferences)
     const suggestions = localStorage.getItem("carSuggestions");
-    if (!suggestions) {
-      toast.error("No car suggestions found. Please set your preferences first.");
-      navigate("/");
-      return;
-    }
-
-    try {
-      const parsedSuggestions = JSON.parse(suggestions);
-      setCars(parsedSuggestions);
-    } catch (error) {
-      console.error("Failed to parse car suggestions:", error);
-      toast.error("Failed to load car suggestions. Please try again.");
-      navigate("/");
-    } finally {
-      setLoading(false);
+    
+    if (suggestions) {
+      try {
+        const parsedSuggestions = JSON.parse(suggestions);
+        if (parsedSuggestions.length > 0) {
+          setCars(parsedSuggestions);
+          setLoading(false);
+        } else {
+          // Empty array means we're waiting for initial results
+          setLoading(true);
+        }
+      } catch (error) {
+        console.error("Failed to parse car suggestions:", error);
+        toast.error("Failed to load car suggestions. Please try again.");
+        navigate("/");
+        return;
+      }
+    } else {
+      // No suggestions at all - redirect to preferences
+      setLoading(true);
     }
 
     // Load liked cars from storage
@@ -88,6 +93,39 @@ const Swipe = () => {
     if (stored) {
       setLikedCars(JSON.parse(stored));
     }
+    
+    // Listen for progressive car suggestion updates
+    const handleSuggestionsUpdate = (event: CustomEvent) => {
+      const { suggestions } = event.detail;
+      console.log(`📥 Received ${suggestions.length} car suggestions`);
+      
+      setCars((prevCars) => {
+        // Merge new suggestions with existing ones, avoiding duplicates
+        const existingKeys = new Set(
+          prevCars.map(car => `${car.year}_${car.make}_${car.model}`)
+        );
+        
+        const newCars = suggestions.filter((car: Car) => {
+          const key = `${car.year}_${car.make}_${car.model}`;
+          return !existingKeys.has(key);
+        });
+        
+        if (newCars.length > 0) {
+          console.log(`✅ Adding ${newCars.length} new cars to the queue`);
+          toast.success(`Found ${newCars.length} more cars for you!`);
+        }
+        
+        return [...prevCars, ...newCars];
+      });
+      
+      setLoading(false);
+    };
+    
+    window.addEventListener('carSuggestionsUpdated', handleSuggestionsUpdate as EventListener);
+    
+    return () => {
+      window.removeEventListener('carSuggestionsUpdated', handleSuggestionsUpdate as EventListener);
+    };
   }, [navigate]);
 
   const completeSwipe = async (direction: "left" | "right") => {
@@ -241,19 +279,23 @@ const Swipe = () => {
   };
 
   // Show loading state
-  if (loading) {
+  if (loading && cars.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-automotive-navy via-automotive-dark to-automotive-blue flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-white mx-auto mb-4"></div>
-          <p className="text-white text-lg">Finding perfect cars for you...</p>
+          <p className="text-white text-lg font-semibold mb-2">Finding perfect cars for you...</p>
+          <p className="text-white/70 text-sm">This may take a few moments</p>
         </div>
       </div>
     );
   }
 
+  // Show "still loading" state while showing cars
+  const isStillLoading = loading && cars.length > 0;
+
   // Show empty state
-  if (cars.length === 0) {
+  if (cars.length === 0 && !loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-automotive-navy via-automotive-dark to-automotive-blue flex items-center justify-center p-4">
         <div className="text-center">
@@ -289,7 +331,7 @@ const Swipe = () => {
           >
             <ChevronLeft className="h-6 w-6" />
           </Button>
-          <h1 className="text-2xl font-bold text-white">AutoSwipe</h1>
+          <h1 className="text-2xl font-bold text-white">CarTender</h1>
           <Button
             variant="ghost"
             onClick={() => navigate("/liked")}
@@ -413,6 +455,12 @@ const Swipe = () => {
 
         <p className="text-center text-white/70 mt-6">
           {cars.length - currentIndex} cars remaining
+          {isStillLoading && (
+            <span className="ml-2 inline-flex items-center gap-2 text-automotive-success">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Finding more...
+            </span>
+          )}
         </p>
       </div>
 

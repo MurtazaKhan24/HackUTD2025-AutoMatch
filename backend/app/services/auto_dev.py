@@ -96,6 +96,16 @@ class AutoDevService:
                     # Extract price
                     price_value = retail.get("price") or details.get("price")
                     
+                    # Extract dealer listing URL - CRITICAL for linking to actual dealer page
+                    listing_url = (
+                        retail.get("url") or 
+                        retail.get("link") or 
+                        details.get("url") or 
+                        details.get("link") or
+                        None
+                    )
+                    logger.info(f"Dealer listing URL: {listing_url}")
+                    
                     # Build result
                     result = {
                         "make": make.title(),
@@ -106,6 +116,7 @@ class AutoDevService:
                             "marketValue": price_value
                         },
                         "photos": photos,
+                        "url": listing_url,  # Add the actual dealer listing URL
                         "specs": {
                             "mpg": vehicle_info.get("mpg") or f"{vehicle_info.get('mpgCity', 'N/A')}/{vehicle_info.get('mpgHighway', 'N/A')}",
                             "horsepower": vehicle_info.get("horsepower"),

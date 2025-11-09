@@ -1,10 +1,10 @@
 # Agent Integrations Documentation
 
-This document describes the AI agent integrations in the AutoMatch car shopping platform.
+This document describes the AI agent integrations in the CarTender car shopping platform.
 
 ## Overview
 
-AutoMatch uses specialized AI agents to help users find local services and resources during the car buying process. Each agent uses web search, data extraction, and LLM-powered summarization to provide personalized recommendations.
+CarTender uses specialized AI agents to help users find local services and resources during the car buying process. Each agent uses web search, data extraction, and LLM-powered summarization to provide personalized recommendations.
 
 ## Agents
 
