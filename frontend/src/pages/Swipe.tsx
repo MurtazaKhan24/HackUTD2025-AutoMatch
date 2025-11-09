@@ -59,7 +59,29 @@ const Swipe = () => {
 
     try {
       const parsedSuggestions = JSON.parse(suggestions);
-      setCars(parsedSuggestions);
+      
+      // Load already swiped cars to filter them out
+      const swipedCarsData = localStorage.getItem("swipedCars");
+      const swipedCars = swipedCarsData ? JSON.parse(swipedCarsData) : [];
+      
+      // Create a Set of swiped car identifiers for fast lookup
+      const swipedCarIds = new Set(
+        swipedCars.map((car: Car) => `${car.make}_${car.model}_${car.year}`)
+      );
+      
+      // Filter out cars that have already been swiped
+      const unseenCars = parsedSuggestions.filter((car: Car) => {
+        const carId = `${car.make}_${car.model}_${car.year}`;
+        return !swipedCarIds.has(carId);
+      });
+      
+      if (unseenCars.length === 0) {
+        toast.info("You've seen all available cars!");
+        navigate("/liked");
+        return;
+      }
+      
+      setCars(unseenCars);
     } catch (error) {
       console.error("Failed to parse car suggestions:", error);
       toast.error("Failed to load car suggestions. Please try again.");
@@ -82,6 +104,12 @@ const Swipe = () => {
     setDragOffset(0); // Reset drag offset so the exit animation takes over
     
     const currentCar = cars[currentIndex];
+    
+    // Track this car as swiped (regardless of left or right)
+    const swipedCarsData = localStorage.getItem("swipedCars");
+    const swipedCars = swipedCarsData ? JSON.parse(swipedCarsData) : [];
+    swipedCars.push(currentCar);
+    localStorage.setItem("swipedCars", JSON.stringify(swipedCars));
     
     if (direction === "right") {
       const updatedLiked = [...likedCars, currentCar];

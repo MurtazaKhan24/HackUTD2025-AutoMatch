@@ -29,8 +29,9 @@ const FinancePreferences = () => {
       return;
     }
     
-    // Clear liked cars when starting a new preference session
+    // Clear liked cars and swiped cars when starting a new preference session
     localStorage.removeItem("likedCars");
+    localStorage.removeItem("swipedCars");
     
     localStorage.setItem("financePreferences", JSON.stringify({
       paymentType,
@@ -76,7 +77,7 @@ const FinancePreferences = () => {
           <h1 className="text-4xl font-bold bg-gradient-to-r from-automotive-blue to-automotive-silver bg-clip-text text-transparent mb-2">
             AutoSwipe
           </h1>
-          <p className="text-muted-foreground">Step 1: Finance Preferences</p>
+          <p className="text-muted-foreground">Democratizing Auto Finance</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">

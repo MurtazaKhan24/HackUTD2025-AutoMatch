@@ -45,8 +45,9 @@ const PhysicalPreferences = () => {
       features
     };
     
-    // Clear liked cars when preferences change (new session)
+    // Clear liked cars and swiped cars when preferences change (new session)
     localStorage.removeItem("likedCars");
+    localStorage.removeItem("swipedCars");
     
     localStorage.setItem("carPreferences", JSON.stringify(carPreferences));
 
@@ -97,7 +98,7 @@ const PhysicalPreferences = () => {
           <h1 className="text-4xl font-bold bg-gradient-to-r from-automotive-blue to-automotive-silver bg-clip-text text-transparent mb-2">
             AutoSwipe
           </h1>
-          <p className="text-muted-foreground">Step 2: Car Preferences</p>
+          <p className="text-muted-foreground">Figuring out your Must Haves!</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">

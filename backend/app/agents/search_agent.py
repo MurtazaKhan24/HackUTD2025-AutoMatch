@@ -150,31 +150,31 @@ NO MARKDOWN. NO THINKING. ONLY JSON."""
     except Exception as e:
         logger.error(f"LLM decision failed: {e}, falling back to rule-based logic")
         
-        # FALLBACK: Aggressive rule-based logic if LLM fails - with PRICE RANGE
-        # NO HARDCODED MODELS - keep it open-ended
+        # FALLBACK: Aggressive rule-based logic if LLM fails
+        # Use simpler queries that are more likely to find car listings
         current_count = len(state.get('suggestions', []))
         price = int(state.get('price', 20000))
         min_price = state.get('min_price', int(price * 0.7))
         max_price = state.get('max_price', int(price * 1.0))
-        price_range = f"${min_price//1000}k to ${max_price//1000}k"
         body_styles = state.get('body_styles', ['car'])
+        body_style = body_styles[0] if body_styles else 'car'
         
         if current_count == 0 and state.get('attempts', 0) > 0:
-            # No results, cast a very wide net
-            new_state['query'] = f"best reliable used cars price {price_range}"
-            logger.info(f"Fallback: No results, broadening heavily: {new_state['query']}")
+            # No results, try very simple query
+            new_state['query'] = f"used {body_style} for sale"
+            logger.info(f"Fallback: No results, using simple query: {new_state['query']}")
         elif current_count < 5:
-            # Few results, search for popular sedans
-            new_state['query'] = f"popular reliable sedan price {price_range}"
-            logger.info(f"Fallback: Few results, searching popular sedans: {new_state['query']}")
+            # Few results, search for specific price range
+            new_state['query'] = f"used {body_style} under ${max_price//1000}k"
+            logger.info(f"Fallback: Few results, searching with price: {new_state['query']}")
         elif current_count < 10:
-            # Moderate results, try SUVs or alternative body styles
-            new_state['query'] = f"reliable SUV crossover price {price_range}"
-            logger.info(f"Fallback: Searching SUVs: {new_state['query']}")
+            # Moderate results, try certified pre-owned
+            new_state['query'] = f"certified pre-owned {body_style}"
+            logger.info(f"Fallback: Searching CPO: {new_state['query']}")
         else:
             # Good number of results, search for value picks
-            new_state['query'] = f"value reliable used cars price {price_range}"
-            logger.info(f"Fallback: Searching value picks: {new_state['query']}")
+            new_state['query'] = f"best used {body_style} deals"
+            logger.info(f"Fallback: Searching deals: {new_state['query']}")
         
         new_state['decision'] = 'search'
     
@@ -260,22 +260,14 @@ def search_node(state: Dict) -> Dict:
         if len(suggestions) < 5 and state.get('attempts', 0) < 7:  # Don't boost on last attempt
             logger.info(f"Boosting search - only found {len(suggestions)} results, running complementary query...")
             
-            # Generate a complementary query based on budget - with PRICE RANGE
-            # NO HARDCODED MODELS - let search be open-ended
+            # Generate a complementary query - simpler format for better results
             price = state.get('price', 20000)
-            min_price = state.get('min_price', int(price * 0.7))
             max_price = state.get('max_price', int(price * 1.0))
-            price_range = f"${min_price//1000}k to ${max_price//1000}k"
+            body_styles = state.get('body_styles', ['car'])
+            body_style = body_styles[0] if body_styles else 'car'
             
-            # Generic boost queries without specific models
-            if price >= 50000:
-                boost_query = f"luxury SUV crossover reliable price {price_range}"
-            elif price >= 35000:
-                boost_query = f"midsize SUV crossover reliable price {price_range}"
-            elif price >= 20000:
-                boost_query = f"compact SUV crossover reliable price {price_range}"
-            else:
-                boost_query = f"economical hatchback sedan reliable price {price_range}"
+            # Simple boost query that's more likely to find listings
+            boost_query = f"used {body_style} for sale near me"
             
             try:
                 # Run boost search
@@ -352,13 +344,12 @@ def parallel_search_cars(query, min_price, max_price, num_queries=3):
     
     price_range = f"${min_price//1000}k to ${max_price//1000}k"
     
-    # Generate diverse query variations
+    # Generate diverse query variations - more specific to find actual car listings
     queries = [
-        f"used sedan reliable price {price_range}",
-        f"used SUV crossover price {price_range}",
-        f"used coupe sporty price {price_range}",
-        f"used hatchback compact price {price_range}",
-        f"certified pre-owned luxury price {price_range}"
+        f"used {query} for sale",
+        f"certified pre-owned sedan {min_price//1000}k",
+        f"used luxury sedan under {max_price//1000}k",
+        f"pre-owned SUV {min_price//1000}k to {max_price//1000}k"
     ][:num_queries]
     
     all_suggestions = []
@@ -471,22 +462,11 @@ def get_car_suggestions(data):
     logger.info(f"Budget: ${price:,}, Price range: ${min_price:,} - ${max_price:,}")
     
     # Build generic initial query - handle both frontend naming conventions
-    # NO hardcoded models - make it open-ended for maximum diversity
-    if price >= 80000:
-        price_desc = "luxury premium"
-    elif price >= 50000:
-        price_desc = "upscale premium"
-    elif price >= 35000:
-        price_desc = "mid-range quality"
-    elif price >= 20000:
-        price_desc = "affordable reliable"
-    else:
-        price_desc = "budget economical"
+    # Simpler queries that are more likely to find actual car listings
+    body_style_text = body_types[0] if body_types else 'car'
     
-    # Build open-ended query - let the LLM discover cars autonomously
-    body_style_text = ' '.join(body_types) if body_types else 'car'
-    feature_text = ' '.join(features[:2]) if features else 'reliable'
-    query = f"best {price_desc} {body_style_text} {feature_text} used cars price {price_range}"
+    # Simpler query format that works better with search engines
+    query = f"used {body_style_text} for sale under ${max_price//1000}k"
     
     logger.info(f"Initial search query: {query}")
     logger.info(f"Target price range: {price_range}")

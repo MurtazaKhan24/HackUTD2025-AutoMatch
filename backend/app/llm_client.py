@@ -11,7 +11,7 @@ def llm_chat(prompt, response_format=None, temperature=0.2, max_tokens=1024):
     # Handle both string prompts and message lists
     if isinstance(prompt, str):
         messages = [
-            {"role": "system", "content": "You are a helpful car shopping assistant. You help users find cars based on their preferences. Always respond with valid JSON."},
+            {"role": "system", "content": "You are a helpful car shopping assistant. You help users find cars based on their preferences. Always respond with valid JSON. /no-think"},
             {"role": "user", "content": prompt}
         ]
     elif isinstance(prompt, list):
@@ -44,9 +44,22 @@ def llm_chat(prompt, response_format=None, temperature=0.2, max_tokens=1024):
             # Try to parse as JSON if requested
             if response_format and (response_format.get('type') in ['json', 'json_object']):
                 try:
-                    return json.loads(content)
-                except json.JSONDecodeError:
+                    # Clean up the response - remove <think> tags and extract JSON
+                    import re
+                    # Remove <think>...</think> tags if present
+                    cleaned_content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL)
+                    # Extract JSON object (anything between { and })
+                    json_match = re.search(r'\{.*\}', cleaned_content, re.DOTALL)
+                    if json_match:
+                        json_str = json_match.group(0)
+                        return json.loads(json_str)
+                    else:
+                        # Try parsing the cleaned content directly
+                        return json.loads(cleaned_content.strip())
+                except json.JSONDecodeError as e:
                     # If JSON parsing fails, return error with content
+                    print(f"JSON Parse Error: {e}")
+                    print(f"Content: {content[:500]}...")
                     return {"error": "Failed to parse JSON response", "content": content}
             return content
         return result
