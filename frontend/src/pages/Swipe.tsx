@@ -255,13 +255,7 @@ const Swipe = () => {
                       {currentCar.specs?.transmission && (
                         <>
                           <span className="capitalize">{currentCar.specs.transmission}</span>
-                          <span>•</span>
-                        </>
-                      )}
-                      {currentCar.specs?.mpg && (
-                        <>
-                          <span>{currentCar.specs.mpg} MPG</span>
-                          <span>•</span>
+                          {currentCar.trim && <span>•</span>}
                         </>
                       )}
                       {currentCar.trim && (

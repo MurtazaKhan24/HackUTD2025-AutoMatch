@@ -169,9 +169,7 @@ Return ONLY valid JSON:
     "reasoning": "why this search will add diverse results",
     "next_query": "specific search targeting multiple cars",
     "decision": "search" or "end"
-}}
-
-NO MARKDOWN. NO THINKING. ONLY JSON."""
+}}"""
 
         logger.info(f"Asking LLM to decide next search strategy...")
         
@@ -402,7 +400,7 @@ def search_node(state: Dict) -> Dict:
         new_state['error'] = str(e)
         return new_state
 
-def parallel_search_cars(query, min_price, max_price, num_queries=3):
+def parallel_search_cars(query, min_price, max_price, body_styles=None, features=None, num_queries=3):
     """
     Run multiple diverse search queries in parallel for faster results.
     Returns combined suggestions from all queries.
@@ -413,14 +411,35 @@ def parallel_search_cars(query, min_price, max_price, num_queries=3):
     
     price_range = f"${min_price//1000}k to ${max_price//1000}k"
     
-    # Generate diverse query variations
-    queries = [
-        f"used sedan reliable price {price_range}",
-        f"used SUV crossover price {price_range}",
-        f"used coupe sporty price {price_range}",
-        f"used hatchback compact price {price_range}",
-        f"certified pre-owned luxury price {price_range}"
-    ][:num_queries]
+    # Define preferred sites for higher quality results
+    preferred_sites = [
+        "caranddriver.com", 
+        "edmunds.com", 
+        "motortrend.com", 
+        "reddit.com/r/whatcarshouldibuy"
+    ]
+
+    # Build body style filter
+    if body_styles and body_styles != ['any']:
+        body_filter = ' '.join(body_styles)
+        logger.info(f"Body style filter: {body_filter}")
+    else:
+        body_filter = None
+        logger.info("No body style filter - searching all types")
+    
+    # Generate diverse query variations based on preferences
+    queries = []
+    base_query = query # Use the intelligently crafted query from get_car_suggestions
+    
+    # 1. Add a general query
+    queries.append(base_query)
+    
+    # 2. Add site-specific queries for higher quality results
+    for site in preferred_sites:
+        queries.append(f"{base_query} site:{site}")
+
+    # Limit to num_queries, prioritizing site-specific ones
+    queries = queries[:num_queries]
     
     logger.info(f"Generated {len(queries)} parallel queries: {queries}")
     
@@ -524,12 +543,18 @@ def get_car_suggestions(data):
     body_types = data.get('bodyTypes') or data.get('body_styles', [])
     body_style = body_types[0] if body_types else 'car'
     
+    logger.info(f"========================================")
+    logger.info(f"USER PREFERENCES RECEIVED:")
+    logger.info(f"  Body Types: {body_types}")
+    logger.info(f"  Budget: ${data.get('budget') or data.get('price', 20000):,}")
+    logger.info(f"========================================")
+    
     # Extract features - handle both string and object formats
     features_raw = data.get('features', [])
     features = []
     for f in features_raw:
         if isinstance(f, dict):
-            features.append(f.get('name', ''))
+            features.append(f.get('label', ''))
         elif isinstance(f, str):
             features.append(f)
     features = [f for f in features if f]  # Remove empty strings
@@ -605,7 +630,7 @@ def get_car_suggestions(data):
     # Method 2: Run parallel diverse searches (fast)
     parallel_start = time.time()
     logger.info("Method 2: Starting parallel SerpAPI searches...")
-    parallel_suggestions = parallel_search_cars(query, min_price, max_price, num_queries=4)
+    parallel_suggestions = parallel_search_cars(query, min_price, max_price, body_styles=body_types, features=features, num_queries=4)
     parallel_elapsed = time.time() - parallel_start
     all_suggestions.extend(parallel_suggestions)
     logger.info(f"Parallel search: {len(parallel_suggestions)} suggestions in {parallel_elapsed:.2f}s")
@@ -718,26 +743,32 @@ def llm_suggest_cars(price, min_price, max_price, body_styles, features):
     body_style_text = ', '.join(body_styles) if body_styles else 'any'
     feature_text = ', '.join(features[:3]) if features else 'reliable, safe'
     
-    prompt = f"""You are a car expert. Recommend 15-20 SPECIFIC used car make/model/year combinations for someone with these requirements:
+    # Build strict body style requirement
+    if body_styles and body_styles != ['any']:
+        body_requirement = f"ONLY {body_style_text} body style(s). DO NOT suggest sedans, SUVs, trucks, or any other body styles."
+    else:
+        body_requirement = "Any body style is acceptable."
+    
+    prompt = f"""You are a car expert. Recommend 15-20 SPECIFIC used car make/model/year combinations.
 
-REQUIREMENTS:
-- Budget: ${price:,} (strict range: ${min_price:,} to ${max_price:,})
-- Body styles preferred: {body_style_text}
-- Features: {feature_text}
+STRICT REQUIREMENTS (YOU MUST FOLLOW THESE):
+1. Price: Cars must typically sell for ${min_price:,} to ${max_price:,} (budget: ${price:,})
+2. Body Style: {body_requirement}
+3. Desired features: {feature_text}
 
-YOUR TASK:
-List 15-20 diverse specific cars (make, model, year) that fit this budget and requirements.
-Include a variety of brands and models.
-Focus on cars typically available in the ${min_price//1000}k-${max_price//1000}k range.
+CRITICAL INSTRUCTIONS:
+- {body_requirement}
+- Every car MUST be available in the ${min_price//1000}k-${max_price//1000}k price range
+- Provide 15-20 diverse makes and models
+- Include variety: different brands, luxury and non-luxury, sporty and practical
+- Focus on cars commonly available used in 2018-2024 model years
 
 Return ONLY valid JSON array format:
 [
   {{"make": "Honda", "model": "Accord", "year": "2019"}},
   {{"make": "Toyota", "model": "Camry", "year": "2020"}},
   ...
-]
-
-NO THINKING. NO EXPLANATION. ONLY JSON ARRAY."""
+]"""
 
     try:
         response = llm_chat(prompt, response_format={"type": "json_object"})

@@ -118,13 +118,7 @@ const Liked = () => {
                     {car.specs?.transmission && (
                       <>
                         <span className="capitalize">{car.specs.transmission}</span>
-                        <span>•</span>
-                      </>
-                    )}
-                    {car.specs?.mpg && (
-                      <>
-                        <span>{car.specs.mpg} MPG</span>
-                        <span>•</span>
+                        {car.specs?.drivetrain && <span>•</span>}
                       </>
                     )}
                     {car.specs?.drivetrain && (

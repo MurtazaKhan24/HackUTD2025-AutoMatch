@@ -11,7 +11,7 @@ def llm_chat(prompt, response_format=None, temperature=0.2, max_tokens=1024):
     # Handle both string prompts and message lists
     if isinstance(prompt, str):
         messages = [
-            {"role": "system", "content": "You are a helpful car shopping assistant. You help users find cars based on their preferences. Always respond with valid JSON."},
+            {"role": "system", "content": "You are an AI assistant. Your only job is to respond with valid, properly formatted JSON, and nothing else. Do not include markdown, explanations, or any text outside of the JSON structure."},
             {"role": "user", "content": prompt}
         ]
     elif isinstance(prompt, list):
