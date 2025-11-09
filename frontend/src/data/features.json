@@ -1,0 +1,14 @@
+[
+  { "id": "sunroof", "label": "Sunroof", "syn": ["moonroof"] },
+  { "id": "heated_seats", "label": "Heated Seats", "syn": ["warm seats"] },
+  { "id": "bluetooth", "label": "Bluetooth", "syn": ["wireless audio"] },
+  { "id": "backup_camera", "label": "Backup Camera", "syn": ["rear camera"] },
+  { "id": "navigation", "label": "Navigation System", "syn": ["gps", "maps"] },
+  { "id": "leather_seats", "label": "Leather Seats", "syn": ["leather interior"] },
+  { "id": "adaptive_cruise", "label": "Adaptive Cruise Control", "syn": ["cruise"] },
+  { "id": "apple_carplay", "label": "Apple CarPlay", "syn": ["carplay"] },
+  { "id": "android_auto", "label": "Android Auto", "syn": ["android"] },
+  { "id": "remote_start", "label": "Remote Start", "syn": ["remote ignition"] },
+  { "id": "parking_sensors", "label": "Parking Sensors", "syn": ["park assist"] },
+  { "id": "blind_spot", "label": "Blind Spot Monitor", "syn": ["blind spot"] }
+]

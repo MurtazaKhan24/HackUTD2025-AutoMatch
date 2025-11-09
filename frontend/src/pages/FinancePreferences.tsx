@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { Toggle } from "@/components/ui/toggle";
@@ -12,7 +11,7 @@ const FinancePreferences = () => {
   const navigate = useNavigate();
   const [paymentType, setPaymentType] = useState<"monthly" | "total">("total");
   const [budget, setBudget] = useState([50000]);
-  const [financing, setFinancing] = useState("");
+  const [financing, setFinancing] = useState<'finance' | 'cash'>('finance');
   const [loanTerm, setLoanTerm] = useState(60); // months, default 60
 
   const monthlyMin = 200;
@@ -52,7 +51,29 @@ const FinancePreferences = () => {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-4">
-            {/* Show a single rocker/toggle only when user chooses Finance */}
+            {/* Financing type toggle */}
+            <div className="flex items-center justify-between w-full mb-2">
+              <Label className="text-base font-semibold">Financing Preference</Label>
+              <Toggle
+                pressed={financing === 'finance'}
+                onPressedChange={(pressed: boolean) => {
+                  const value = pressed ? 'finance' : 'cash';
+                  setFinancing(value);
+                  if (value === 'cash') {
+                    setPaymentType('total');
+                    setBudget([50000]);
+                  } else {
+                    setBudget([paymentType === 'monthly' ? 500 : 50000]);
+                  }
+                }}
+                aria-label="Toggle financing type"
+                className="w-44 h-12 flex items-center justify-between px-3 rounded-full bg-gradient-to-r from-automotive-navy to-automotive-blue border border-automotive-silver shadow-lg"
+              >
+                <span className={financing === 'cash' ? 'text-white font-bold' : 'text-automotive-silver font-medium'}>Cash</span>
+                <span className={financing === 'finance' ? 'text-white font-bold' : 'text-automotive-silver font-medium'}>Finance</span>
+              </Toggle>
+            </div>
+            {/* Show payment type toggle only when user chooses Finance */}
             {financing === "finance" && (
               <div className="flex items-center justify-between w-full mb-2">
                 <Label className="text-base font-semibold">Payment Type</Label>
@@ -114,37 +135,7 @@ const FinancePreferences = () => {
             </div>
           )}
 
-          <div className="space-y-2">
-            <Label htmlFor="financing" className="text-base font-semibold">
-              Financing Preference
-            </Label>
-            <Select value={financing} onValueChange={value => {
-              setFinancing(value);
-              if (value === "cash") {
-                setPaymentType("total");
-                setBudget([50000]); // reset to total default
-              }
-              if (value === "lease") {
-                setPaymentType("total");
-                setBudget([50000]);
-              }
-              if (value === "finance") {
-                // keep current paymentType, but reset budget to default for current type
-                setBudget([paymentType === "monthly" ? 500 : 50000]);
-              }
-            }}>
-              <SelectTrigger id="financing">
-                <SelectValue placeholder="Select financing option" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="cash">Cash</SelectItem>
-                <SelectItem value="lease">Lease</SelectItem>
-                <SelectItem value="finance">Finance</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-           <Button 
+          <Button 
              type="submit" 
              className="w-full bg-gradient-to-r from-automotive-blue to-automotive-navy text-white hover:opacity-90 transition-opacity"
              size="lg"

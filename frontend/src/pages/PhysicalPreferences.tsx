@@ -5,11 +5,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
+import { FeatureTagInput, FeatureTag } from "@/components/FeatureTagInput";
 
 const PhysicalPreferences = () => {
   const navigate = useNavigate();
   const [bodyType, setBodyType] = useState("");
   const [transmission, setTransmission] = useState("");
+  const [features, setFeatures] = useState<FeatureTag[]>([]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +35,8 @@ const PhysicalPreferences = () => {
     localStorage.setItem("carPreferences", JSON.stringify({
       ...parsedFinancePrefs,
       bodyType,
-      transmission
+      transmission,
+      features
     }));
 
     toast.success("Preferences saved! Let's find your perfect car");
@@ -85,6 +88,16 @@ const PhysicalPreferences = () => {
                 <SelectItem value="any">Any</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-base font-semibold">Car Features</Label>
+            <FeatureTagInput
+              value={features}
+              onChange={setFeatures}
+              maxTags={12}
+              placeholder="Type or select car features..."
+            />
           </div>
 
           <div className="flex gap-4">
