@@ -7,6 +7,7 @@ import FinancePreferences from "./pages/FinancePreferences";
 import PhysicalPreferences from "./pages/PhysicalPreferences";
 import Swipe from "./pages/Swipe";
 import Liked from "./pages/Liked";
+import Purchase from "./pages/Purchase";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +23,7 @@ const App = () => (
           <Route path="/preferences/physical" element={<PhysicalPreferences />} />
           <Route path="/swipe" element={<Swipe />} />
           <Route path="/liked" element={<Liked />} />
+          <Route path="/purchase" element={<Purchase />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

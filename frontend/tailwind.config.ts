@@ -58,7 +58,7 @@ export default {
           ring: "hsl(var(--sidebar-ring))",
         },
         "automotive-dark": "hsl(var(--automotive-dark))",
-        "automotive-blue": "hsl(var(--automotive-blue))",
+        "automotive-red": "hsl(var(--automotive-blue))",
         "automotive-navy": "hsl(var(--automotive-navy))",
         "automotive-silver": "hsl(var(--automotive-silver))",
         "automotive-success": "hsl(var(--automotive-success))",

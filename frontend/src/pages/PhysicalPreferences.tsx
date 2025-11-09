@@ -2,22 +2,29 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { FeatureTagInput, FeatureTag } from "@/components/FeatureTagInput";
+import { MdDirectionsCar, MdAirportShuttle, MdLocalShipping, MdTimeToLeave, MdCarRental, MdOutlineCarRepair } from "react-icons/md";
 
 const PhysicalPreferences = () => {
   const navigate = useNavigate();
-  const [bodyType, setBodyType] = useState("");
-  const [transmission, setTransmission] = useState("");
+  const [bodyTypes, setBodyTypes] = useState<string[]>([]);
   const [features, setFeatures] = useState<FeatureTag[]>([]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleBodyTypeClick = (type: string) => {
+    setBodyTypes(prev =>
+      prev.includes(type)
+        ? prev.filter(t => t !== type)
+        : [...prev, type]
+    );
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!bodyType || !transmission) {
-      toast.error("Please fill in all preferences");
+    if (bodyTypes.length === 0) {
+      toast.error("Please select at least one body type");
       return;
     }
 
@@ -32,15 +39,63 @@ const PhysicalPreferences = () => {
 
     // Store combined preferences
     const parsedFinancePrefs = JSON.parse(financePrefs);
-    localStorage.setItem("carPreferences", JSON.stringify({
+    const carPreferences = {
       ...parsedFinancePrefs,
-      bodyType,
-      transmission,
+      bodyTypes,
       features
-    }));
+    };
+    
+    // Clear liked cars when preferences change (new session)
+    localStorage.removeItem("likedCars");
+    
+    localStorage.setItem("carPreferences", JSON.stringify(carPreferences));
+    
+    // Initialize empty suggestions array - we'll add to it progressively
+    const suggestions: any[] = [];
+    localStorage.setItem("carSuggestions", JSON.stringify(suggestions));
+    
+    toast.info("Generating personalized recommendations...");
 
-    toast.success("Preferences saved! Let's find your perfect car");
-    navigate("/swipe");
+    try {
+      // Navigate to swipe page immediately (it will show loading state)
+      navigate("/swipe");
+      
+      // Fetch car suggestions from backend
+      const response = await fetch('http://localhost:5001/api/search/suggestions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(carPreferences)
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to load suggestions');
+      }
+      
+      const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      
+      if (data.suggestions && data.suggestions.length > 0) {
+        // Store all suggestions in localStorage
+        localStorage.setItem("carSuggestions", JSON.stringify(data.suggestions));
+        
+        // Dispatch custom event to notify Swipe page of new cars
+        window.dispatchEvent(new CustomEvent('carSuggestionsUpdated', {
+          detail: { suggestions: data.suggestions }
+        }));
+        
+        toast.success(`Found ${data.suggestions.length} perfect matches for you!`);
+      } else {
+        toast.error("No cars found matching your preferences. Try adjusting your criteria.");
+      }
+    } catch (error) {
+      console.error("Failed to load car suggestions:", error);
+      toast.error("Failed to connect to backend. Make sure the server is running on port 5001.");
+    }
   };
 
   return (
@@ -48,9 +103,9 @@ const PhysicalPreferences = () => {
       <Card className="w-full max-w-2xl p-8 bg-card shadow-elevated">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-automotive-blue to-automotive-silver bg-clip-text text-transparent mb-2">
-            AutoSwipe
+            CarTender
           </h1>
-          <p className="text-muted-foreground">Step 2: Car Preferences</p>
+          <p className="text-muted-foreground">Select your must-haves!</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -58,36 +113,27 @@ const PhysicalPreferences = () => {
             <Label htmlFor="bodyType" className="text-base font-semibold">
               Body Type
             </Label>
-            <Select value={bodyType} onValueChange={setBodyType}>
-              <SelectTrigger id="bodyType">
-                <SelectValue placeholder="Select body type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="sedan">Sedan</SelectItem>
-                <SelectItem value="suv">SUV</SelectItem>
-                <SelectItem value="truck">Truck</SelectItem>
-                <SelectItem value="coupe">Coupe</SelectItem>
-                <SelectItem value="hatchback">Hatchback</SelectItem>
-                <SelectItem value="convertible">Convertible</SelectItem>
-                <SelectItem value="any">Any</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="transmission" className="text-base font-semibold">
-              Transmission
-            </Label>
-            <Select value={transmission} onValueChange={setTransmission}>
-              <SelectTrigger id="transmission">
-                <SelectValue placeholder="Select transmission" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="automatic">Automatic</SelectItem>
-                <SelectItem value="manual">Manual</SelectItem>
-                <SelectItem value="any">Any</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="grid grid-cols-3 gap-4 mt-2">
+              {[
+                { key: "sedan", icon: <MdDirectionsCar className="w-8 h-8 mb-1" />, label: "Sedan" },
+                { key: "suv", icon: <MdAirportShuttle className="w-8 h-8 mb-1" />, label: "SUV" },
+                { key: "truck", icon: <MdLocalShipping className="w-8 h-8 mb-1" />, label: "Truck" },
+                { key: "coupe", icon: <MdTimeToLeave className="w-8 h-8 mb-1" />, label: "Coupe" },
+                { key: "hatchback", icon: <MdCarRental className="w-8 h-8 mb-1" />, label: "Hatchback" },
+                { key: "convertible", icon: <MdOutlineCarRepair className="w-8 h-8 mb-1" />, label: "Convertible" }
+              ].map(({ key, icon, label }) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={`flex flex-col items-center justify-center p-4 rounded-lg border transition-all shadow-sm ${bodyTypes.includes(key) ? "bg-blue-100 border-blue-500" : "bg-white border-gray-200"}`}
+                  onClick={() => handleBodyTypeClick(key)}
+                  aria-pressed={bodyTypes.includes(key)}
+                >
+                  {icon}
+                  <span className="text-sm">{label}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -114,7 +160,7 @@ const PhysicalPreferences = () => {
               className="flex-1 bg-gradient-to-r from-automotive-blue to-automotive-navy text-white hover:opacity-90 transition-opacity"
               size="lg"
             >
-              Start Swiping
+              Start Swiping!
             </Button>
           </div>
         </form>

@@ -45,9 +45,9 @@ const PhysicalPreferences = () => {
       <Card className="w-full max-w-2xl p-8 bg-card shadow-elevated">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-automotive-blue to-automotive-silver bg-clip-text text-transparent mb-2">
-            AutoSwipe
+            CarTender
           </h1>
-          <p className="text-muted-foreground">Step 2: Car Preferences</p>
+          <p className="text-muted-foreground">Select your must-haves!</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -101,7 +101,7 @@ const PhysicalPreferences = () => {
               className="flex-1 bg-gradient-to-r from-automotive-blue to-automotive-navy text-white hover:opacity-90 transition-opacity"
               size="lg"
             >
-              Start Swiping
+              Start Swiping!
             </Button>
           </div>
         </form>
