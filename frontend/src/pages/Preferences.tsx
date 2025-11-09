@@ -45,7 +45,7 @@ const PhysicalPreferences = () => {
       <Card className="w-full max-w-2xl p-8 bg-card shadow-elevated">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-automotive-blue to-automotive-silver bg-clip-text text-transparent mb-2">
-            AutoSwipe
+            AutoMatch
           </h1>
           <p className="text-muted-foreground">Step 2: Car Preferences</p>
         </div>
