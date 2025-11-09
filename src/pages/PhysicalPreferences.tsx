@@ -1,32 +1,37 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
-import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 
-const Preferences = () => {
+const PhysicalPreferences = () => {
   const navigate = useNavigate();
-  const [budget, setBudget] = useState([50000]);
-  const [financing, setFinancing] = useState("");
   const [bodyType, setBodyType] = useState("");
   const [transmission, setTransmission] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!financing || !bodyType || !transmission) {
+    if (!bodyType || !transmission) {
       toast.error("Please fill in all preferences");
       return;
     }
 
-    // Store preferences in localStorage
+    // Get finance preferences from localStorage
+    const financePrefs = localStorage.getItem("financePreferences");
+    
+    if (!financePrefs) {
+      toast.error("Finance preferences missing. Redirecting...");
+      navigate("/");
+      return;
+    }
+
+    // Store combined preferences
+    const parsedFinancePrefs = JSON.parse(financePrefs);
     localStorage.setItem("carPreferences", JSON.stringify({
-      budget: budget[0],
-      financing,
+      ...parsedFinancePrefs,
       bodyType,
       transmission
     }));
@@ -42,46 +47,10 @@ const Preferences = () => {
           <h1 className="text-4xl font-bold bg-gradient-to-r from-automotive-blue to-automotive-silver bg-clip-text text-transparent mb-2">
             AutoSwipe
           </h1>
-          <p className="text-muted-foreground">Find your dream car, one swipe at a time</p>
+          <p className="text-muted-foreground">Step 2: Car Preferences</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="budget" className="text-base font-semibold">
-              Maximum Budget: ${budget[0].toLocaleString()}
-            </Label>
-            <Slider
-              id="budget"
-              min={10000}
-              max={150000}
-              step={5000}
-              value={budget}
-              onValueChange={setBudget}
-              className="py-4"
-            />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>$10,000</span>
-              <span>$150,000</span>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="financing" className="text-base font-semibold">
-              Financing Preference
-            </Label>
-            <Select value={financing} onValueChange={setFinancing}>
-              <SelectTrigger id="financing">
-                <SelectValue placeholder="Select financing option" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="cash">Cash Purchase</SelectItem>
-                <SelectItem value="lease">Lease</SelectItem>
-                <SelectItem value="finance">Finance (Loan)</SelectItem>
-                <SelectItem value="flexible">Flexible</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
           <div className="space-y-2">
             <Label htmlFor="bodyType" className="text-base font-semibold">
               Body Type
@@ -118,17 +87,27 @@ const Preferences = () => {
             </Select>
           </div>
 
-          <Button 
-            type="submit" 
-            className="w-full bg-gradient-to-r from-automotive-blue to-automotive-navy text-white hover:opacity-90 transition-opacity"
-            size="lg"
-          >
-            Start Swiping
-          </Button>
+          <div className="flex gap-4">
+            <Button 
+              type="button"
+              variant="outline"
+              onClick={() => navigate("/")}
+              className="flex-1"
+            >
+              Back
+            </Button>
+            <Button 
+              type="submit" 
+              className="flex-1 bg-gradient-to-r from-automotive-blue to-automotive-navy text-white hover:opacity-90 transition-opacity"
+              size="lg"
+            >
+              Start Swiping
+            </Button>
+          </div>
         </form>
       </Card>
     </div>
   );
 };
 
-export default Preferences;
+export default PhysicalPreferences;
