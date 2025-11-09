@@ -1,0 +1,8 @@
+requests
+httpx
+openai  # Used for Nemotron API access
+langchain-core
+langchain-nvidia-ai-endpoints
+langgraph
+pydantic
+env
