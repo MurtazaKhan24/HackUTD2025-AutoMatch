@@ -28,6 +28,10 @@ const FinancePreferences = () => {
       toast.error("Please select a financing preference");
       return;
     }
+    
+    // Clear liked cars when starting a new preference session
+    localStorage.removeItem("likedCars");
+    
     localStorage.setItem("financePreferences", JSON.stringify({
       paymentType,
       budget: budget[0],
@@ -47,7 +51,7 @@ const FinancePreferences = () => {
       apr: financing === 'finance' ? '5.9' : '0', // TODO: get from user if needed
       term_months: financing === 'finance' ? loanTerm.toString() : '0'
     };
-    fetch("http://127.0.0.1:5000/api/price/target", {
+    fetch("http://127.0.0.1:5001/api/price/target", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(financeData)

@@ -20,7 +20,7 @@ const PhysicalPreferences = () => {
     );
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (bodyTypes.length === 0) {
@@ -39,14 +39,55 @@ const PhysicalPreferences = () => {
 
     // Store combined preferences
     const parsedFinancePrefs = JSON.parse(financePrefs);
-    localStorage.setItem("carPreferences", JSON.stringify({
+    const carPreferences = {
       ...parsedFinancePrefs,
       bodyTypes,
       features
-    }));
+    };
+    
+    // Clear liked cars when preferences change (new session)
+    localStorage.removeItem("likedCars");
+    
+    localStorage.setItem("carPreferences", JSON.stringify(carPreferences));
 
-    toast.success("Preferences saved! Let's find your perfect car");
-    navigate("/swipe");
+    // Show loading toast while fetching car suggestions
+    const loadingToast = toast.loading("Finding your perfect cars...");
+
+    try {
+      // Fetch car suggestions from backend
+      const response = await fetch('http://localhost:5001/api/search/suggestions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(carPreferences)
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to load suggestions');
+      }
+      
+      const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      
+      if (data.suggestions && data.suggestions.length > 0) {
+        // Store suggestions in localStorage to pass to Swipe page
+        localStorage.setItem("carSuggestions", JSON.stringify(data.suggestions));
+        toast.dismiss(loadingToast);
+        toast.success(`Found ${data.suggestions.length} cars for you!`);
+        navigate("/swipe");
+      } else {
+        toast.dismiss(loadingToast);
+        toast.error("No cars found matching your preferences. Try adjusting your criteria.");
+      }
+    } catch (error) {
+      console.error("Failed to load car suggestions:", error);
+      toast.dismiss(loadingToast);
+      toast.error("Failed to connect to backend. Make sure the server is running on port 5000.");
+    }
   };
 
   return (

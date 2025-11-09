@@ -1,0 +1,8 @@
+flask
+flask-cors
+python-dotenv
+requests
+aiohttp==3.9.0
+langgraph
+pydantic
+google-search-results
