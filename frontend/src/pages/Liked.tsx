@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ChevronLeft, Home, Trash2 } from "lucide-react";
+import { ChevronLeft, Home, Trash2, Check } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -107,6 +107,13 @@ const Liked = () => {
     toast.success("Removed from garage");
   };
 
+  const handleFinalize = (e: React.MouseEvent, car: Car) => {
+    e.stopPropagation(); // Prevent card click/modal from opening
+    localStorage.setItem("selectedCar", JSON.stringify(car));
+    toast.success(`Finalizing ${car.make} ${car.model}`);
+    navigate("/finance");
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-automotive-navy via-automotive-dark to-automotive-blue p-4">
       <div className="max-w-6xl mx-auto pt-8">
@@ -160,6 +167,15 @@ const Liked = () => {
                     onClick={(e) => handleRemove(e, car.id)}
                   >
                     <Trash2 className="h-4 w-4" />
+                  </Button>
+                  
+                  {/* Add green check button */}
+                  <Button
+                    size="icon"
+                    className="absolute bottom-2 right-2 h-10 w-10 rounded-full z-10 bg-green-500 hover:bg-green-600"
+                    onClick={(e) => handleFinalize(e, car)}
+                  >
+                    <Check className="h-5 w-5 text-white" />
                   </Button>
                 </div>
                 <div className="p-4">
