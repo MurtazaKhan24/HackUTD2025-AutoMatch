@@ -64,7 +64,7 @@ const Liked = () => {
               Start swiping to find your perfect car!
             </p>
             <Button onClick={() => navigate("/swipe")}>
-              Start Swiping
+              Start Swiping!
             </Button>
           </Card>
         ) : (
